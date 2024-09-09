@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { usersTB, blogsTB } = require("../../database");
 
 //Function to send normall messages
 function sendResponse(data, resp){

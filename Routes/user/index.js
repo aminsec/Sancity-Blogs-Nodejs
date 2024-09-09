@@ -33,17 +33,14 @@ router.put("/updateInfo", async (req, resp) => {
 
     if(username == undefined || email == undefined){
         const message = {"state": "failed", "message": "All fields required"};
-        resp.setHeader("Content-Type", "application/json");
-        resp.send(JSON.stringify(message));
-        resp.end();
+        sendResponse(message, resp);
+        return
     }
 
     //Checking for previes data to prevent temp query to database
     if(username == userInfo.username && email == userInfo.email){
         const message = {"state": "success", "message": "Nothing changed!"};
-        resp.setHeader("Content-Type", "application/json");
-        resp.send(JSON.stringify(message));
-        resp.end();
+        sendResponse(message, resp);
         return
     }
 
@@ -56,18 +53,13 @@ router.put("/updateInfo", async (req, resp) => {
 
     if(username == "" || email == ""){
         const message = {"state": "failed", "message": "Fields can not be empty"};
-        resp.setHeader("Content-Type", "application/json");
-        resp.send(JSON.stringify(message));
-        resp.end();
+        sendResponse(message, resp);
         return
     }
 
     if(username.length > 24){
         const data = {"message": "Maximum length for username is 24 character", "state": "failed"};
-
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(message, resp);
         return
     }
 
@@ -80,9 +72,7 @@ router.put("/updateInfo", async (req, resp) => {
 
         if(isNewUsernameExist){
             const message = {"state": "failed", "message": "This username exist"};
-            resp.setHeader("Content-Type", "application/json");
-            resp.send(JSON.stringify(message));
-            resp.end();
+            sendResponse(message, resp);
             return
         }
 
@@ -97,9 +87,7 @@ router.put("/updateInfo", async (req, resp) => {
             }).then(() => {usernameUpdated = true;})
         } catch (error) {
             const message = {"state": "failed", "message": "Couldn't update username"};
-            resp.setHeader("Content-Type", "application/json");
-            resp.send(JSON.stringify(message));
-            resp.end();
+            sendResponse(message, resp);
             return
         }
 
@@ -114,9 +102,7 @@ router.put("/updateInfo", async (req, resp) => {
 
         if(isNewEmailExist){
             const message = {"state": "failed", "message": "This email exist"};
-            resp.setHeader("Content-Type", "application/json");
-            resp.send(JSON.stringify(message));
-            resp.end();
+            sendResponse(message, resp);
             return
         }
 
@@ -130,9 +116,7 @@ router.put("/updateInfo", async (req, resp) => {
             }).then(() => {emailUpdated = true})
         } catch (error) {
             const message = {"state": "failed", "message": "Couldn't update email"};
-            resp.setHeader("Content-Type", "application/json");
-            resp.send(JSON.stringify(message));
-            resp.end();
+            sendResponse(message, resp);
             return
         }
 
@@ -155,9 +139,7 @@ router.put("/updateInfo", async (req, resp) => {
             expiresIn: "1h"
         });
         resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
-        resp.setHeader("Content-Type", "application/json");
-        resp.send(JSON.stringify(message));
-        resp.end();
+        sendResponse(message, resp);
         return
     }
 })
@@ -193,17 +175,13 @@ router.put("/changePassword", async (req, resp) => {
 
     if(newPass === undefined || oldPass == undefined){
         const data = {"message": "All fields required", "success": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
     if(newPass == "" || oldPass == ""){  
         const data = {"message": "Passwords can not be empty", "success": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
@@ -216,9 +194,7 @@ router.put("/changePassword", async (req, resp) => {
 
     if(!isPasswordCorrect){
         const data = {"message": "Current password is incorrect", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
@@ -232,9 +208,7 @@ router.put("/changePassword", async (req, resp) => {
 
     if(updatePassword){
         const data = {"message": "Password updated successfully", "state": "success"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 })

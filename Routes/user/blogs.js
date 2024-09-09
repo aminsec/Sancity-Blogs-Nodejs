@@ -34,15 +34,11 @@ router.get("/", (req, resp) => {
             blogs.push(res[i].dataValues)
         }
         const data = {"state": "success", user: {username: token.username, profilePic: token.profilePic, userid: token.id}, data: blogs};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }).catch(() => {
         const data = {"message": "Couldn't get blogs", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     })
 });
@@ -53,33 +49,25 @@ router.post("/new", async (req, resp) => {
 
     if(title === undefined || body === undefined || tags === undefined || option === undefined || bannerPic === undefined){
         const data = {"message": "All fields required", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
     if(title == "" || body == ""){
         const data = {"message": "Fields can not be empty", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
     if(!option.hasOwnProperty("is_public") || !option.hasOwnProperty("commentsOff") || !option.hasOwnProperty("showLikes")){
         const data = {"message": "Invalid options", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
     
     if(typeof option.is_public !== "boolean" || typeof option.commentsOff !== "boolean" || typeof option.showLikes !== "boolean"){
         const data = {"message": "Invalid options input", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
@@ -92,9 +80,9 @@ router.post("/new", async (req, resp) => {
     if(tags != ""){
         if(tags[0] != "#"){
             const data = {"message": "Tags must start with '#'", "state": "failed"};
-            resp.setHeader("content-type", "application/json");
-            resp.send(JSON.stringify(data));
-            resp.end();
+
+            sendResponse(data, resp);
+
             return
         }
         var tagsValue = tags.split("#");
@@ -111,9 +99,7 @@ router.post("/new", async (req, resp) => {
 
     if(body.length < 100){
         const data = {"message": "Body must be at least 100 character", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
@@ -147,15 +133,11 @@ router.post("/new", async (req, resp) => {
             createdAt:createdTime
         })
         const data = {"message": "Blog added successfully", "state": "success"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     } catch (error) {
         const data = {"message": "Couldn't add blog", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 });
@@ -204,15 +186,11 @@ router.get("/:blogId", async (req, resp) => {
         }
 
         const data = {"state": "success", "user": {username: token.username, profilePic: token.profilePic, userid: token.id}, "data": blog.dataValues};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }else{
         const data = {"state": "failed", "message": "Not found"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 })
@@ -424,7 +402,7 @@ router.get("/:blogId/save", async (req, resp) => {
             }
         }
     }
-})
+});
 
 router.put("/:blogId/update", async (req, resp) => {
     var { blogId } = req.params;
@@ -440,33 +418,25 @@ router.put("/:blogId/update", async (req, resp) => {
 
     if(title === undefined || body === undefined || tags === undefined || option === undefined || bannerPic === undefined){
         const data = {"message": "All fields required", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
     if(title == "" || body == ""){
         const data = {"message": "Fields can not be empty", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
     if(!option.hasOwnProperty("is_public") || !option.hasOwnProperty("commentsOff") || !option.hasOwnProperty("showLikes")){
         const data = {"message": "Invalid options", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
     
     if(typeof option.is_public !== "boolean" || typeof option.commentsOff !== "boolean" || typeof option.showLikes !== "boolean"){
         const data = {"message": "Invalid options input", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
@@ -479,9 +449,9 @@ router.put("/:blogId/update", async (req, resp) => {
     if(tags != ""){
         if(tags[0] != "#"){
             const data = {"message": "Tags must start with '#'", "state": "failed"};
-            resp.setHeader("content-type", "application/json");
-            resp.send(JSON.stringify(data));
-            resp.end();
+
+            sendResponse(data, resp);
+
             return
         }
         var tagsValue = tags.split("#");
@@ -498,9 +468,7 @@ router.put("/:blogId/update", async (req, resp) => {
 
     if(body.length < 100){
         const data = {"message": "Body must be at least 100 character", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 
@@ -530,22 +498,18 @@ router.put("/:blogId/update", async (req, resp) => {
             blog_id: blogId,
             userid: userInfo.id
         }
-    })
-
+    });
 
     if(updateBlog[0] == 1 || updateBlog[0] == 0){
         console.log(updateBlog)
         const data = {"message": "Blog edited successfully", "state": "success"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+
+        sendResponse(data, resp);
         return
     }else{
         console.log(updateBlog)
         const data = {"message": "Couldn't update blog", "state": "failed"};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        sendResponse(data, resp);
         return
     }
 })
