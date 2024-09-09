@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto')
-const { usersTB } = require("../database");
+const { usersTB } = require("../../database");
 const jwt = require('jsonwebtoken');
 var validator = require("email-validator");
 var nodemailer = require('nodemailer');
