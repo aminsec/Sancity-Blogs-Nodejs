@@ -48,7 +48,7 @@ router.get("/", async (req, resp) => {
         blogLists.push(blog);
     }));
 
-    sendResponse({"state": "success", "blogs": {"len": blogLists.length, "content": blogLists}}, resp)
+    sendResponse({"state": "success", "blogs": {"len": blogLists.length, "content": blogLists}}, resp);
 })
 
 router.get("/:blogId", async (req, resp) => {
