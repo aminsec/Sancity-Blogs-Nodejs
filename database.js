@@ -116,6 +116,17 @@ const blogsTB = sequelize.define("blogs", {
     createdAt: {
         type: DataTypes.DATE
     },
+
+    blog_magicToken: {
+        type: DataTypes.STRING,
+        defaultValue: null
+    },
+
+    magicToken_exp: {
+        type: DataTypes.STRING,
+        defaultValue: "0"
+    },
+
     tags: {
         type: DataTypes.STRING
     }
