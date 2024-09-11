@@ -14,15 +14,22 @@ function sendResponse(data, resp){
 
 router.get("/info", async(req, resp) => {
     const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    const userData = await usersTB.findOne({
+    const getUserData = await usersTB.findOne({
         where: {
             username: token.username
         }
     })
-    delete userData.dataValues.password;
-    delete userData.dataValues.savedPosts;
-    delete userData.dataValues.likedPosts;
+    var userData = {
+        userid: getUserData.dataValues.userid,
+        username: getUserData.dataValues.username,
+        email: getUserData.dataValues.email,
+        joinDate: getUserData.dataValues.joinDate,
+        role: getUserData.dataValues.role,
+        profilePic: getUserData.dataValues.profilePic
+    };
+
     sendResponse(userData, resp);
+    return
 })
 
 router.put("/updateInfo", async (req, resp) => {

@@ -228,108 +228,110 @@ router.get("/:blogId/like", async (req, resp) => {
     var user = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
     const checkBlogAccessble = await blogsTB.findOne({
         where: {
-            blog_id: blogId
+            blog_id: blogId,
+            is_public: 1
+        }
+    });
+    if(checkBlogAccessble == null){
+        sendResponse({"state": "failed", "message": "Couldn't like blog"}, resp);
+        return
+    }
+
+    //Getting user liked posts. If user already liked the posts, we decrease, else we increase the likes
+    const userLikedPosts = await usersTB.findAll({
+        attributes: ["likedPosts"],
+        where: {
+            userid: user.id
         }
     })
-    var blogInfo = checkBlogAccessble.dataValues;
-    if(blogInfo.userid !== user.id && blogInfo.is_public == 0){
-        sendResponse({"state": "failed", "message": "Couldn't like or dislike blog"}, resp)
-    }else{
-        //Getting user liked posts. If user already liked the posts, we decrease, else we increase the likes
-        const userLikedPosts = await usersTB.findAll({
-            attributes: ["likedPosts"],
-            where: {
-                userid: user.id
+    var likedPosts = userLikedPosts[0].dataValues.likedPosts
+    var likedPostsLists = likedPosts.split(",")
+    //Checking if user has liked the current post
+    if(likedPostsLists.includes(blogId)){
+        //If user has liked the current post, it means user wants to dislike it, so we remove the blog id from user's likedPosts list
+        var newLikedPostsList = []
+        for(var i = 0; i < likedPostsLists.length; i++){
+            if(likedPostsLists[i] == blogId){
+                continue
+            }else{
+                newLikedPostsList.push(likedPostsLists[i])
             }
-        })
-        var likedPosts = userLikedPosts[0].dataValues.likedPosts
-        var likedPostsLists = likedPosts.split(",")
-        //Checking if user has liked the current post
-        if(likedPostsLists.includes(blogId)){
-            //If user has liked the current post, it means user wants to dislike it, so we remove the blog id from user's likedPosts list
-            var newLikedPostsList = []
-            for(var i = 0; i < likedPostsLists.length; i++){
-                if(likedPostsLists[i] == blogId){
-                    continue
-                }else{
-                    newLikedPostsList.push(likedPostsLists[i])
+        }
+        //updating user's liked posts list 
+        var updatedLikedPostsList = newLikedPostsList.join(",");
+        const disliked = await usersTB.update({
+            likedPosts: updatedLikedPostsList,
+            }, {
+                where: {
+                    userid: user.id
                 }
-            }
-            //updating user's liked posts list 
-            var updatedLikedPostsList = newLikedPostsList.join(",");
-            const disliked = await usersTB.update({
-                likedPosts: updatedLikedPostsList,
-                }, {
-                    where: {
-                        userid: user.id
-                    }
-                })
+            })
 
-            if(disliked){
-                //getting current blog's likes 
-                const blogInfo = await blogsTB.findOne({
-                    where: {
-                        blog_id: blogId
-                    }
-                })
-                const blogLikes = blogInfo.dataValues.likes;
-                //Updating blog's likes - 1
-                const decreaseLike = await blogsTB.update({
-                    likes: blogLikes - 1
-                },
-                {
-                    where: {
-                        blog_id: blogId
-                    }
-                })
-                if(decreaseLike){
-                    sendResponse({"state": "success", "message": "Blog disliked successfully"}, resp)
-                }else{
-                    sendResponse({"state": "failed", "message": "Coulndn't dislike blog"}, resp)
+        if(disliked){
+            //getting current blog's likes 
+            const blogInfo = await blogsTB.findOne({
+                where: {
+                    blog_id: blogId
                 }
-                
+            })
+            const blogLikes = blogInfo.dataValues.likes;
+            //Updating blog's likes - 1
+            const decreaseLike = await blogsTB.update({
+                likes: blogLikes - 1
+            },
+            {
+                where: {
+                    blog_id: blogId
+                }
+            })
+            if(decreaseLike){
+                sendResponse({"state": "success", "message": "Blog disliked successfully"}, resp)
             }else{
                 sendResponse({"state": "failed", "message": "Coulndn't dislike blog"}, resp)
             }
-
+            
         }else{
+            sendResponse({"state": "failed", "message": "Coulndn't dislike blog"}, resp)
+        }
 
-            likedPostsLists.push(blogId)
-            var updatedLikedPostsList = likedPostsLists.join(",");
-            const liked = await usersTB.update(
-                {
-                    likedPosts: updatedLikedPostsList,
-                }, 
-                {
-                    where: {
-                        userid: user.id
-                    }
+    }else{
+
+        likedPostsLists.push(blogId)
+        var updatedLikedPostsList = likedPostsLists.join(",");
+        const liked = await usersTB.update(
+            {
+                likedPosts: updatedLikedPostsList,
+            }, 
+            {
+                where: {
+                    userid: user.id
                 }
-            )
-            if(liked){
-                //getting current blog's likes 
-                const blogInfo = await blogsTB.findOne({
-                    where: {
-                        blog_id: blogId
-                    }
-                })
-                const blogLikes = blogInfo.dataValues.likes;
-                const increaseLikes = await blogsTB.update({
-                    likes: blogLikes + 1
-                },
-                {
-                    where: {
-                        blog_id: blogId
-                    }
-                })
-                if(increaseLikes){
-                    sendResponse({"state": "success", "message": "Blog liked successfully"}, resp)
-                }
-            }else{
-                sendResponse({"state": "failed", "message": "Coulndn't like blog"}, resp)
             }
+        )
+        if(liked){
+            //getting current blog's likes 
+            const blogInfo = await blogsTB.findOne({
+                where: {
+                    blog_id: blogId
+                }
+            })
+            const blogLikes = blogInfo.dataValues.likes;
+            const increaseLikes = await blogsTB.update({
+                likes: blogLikes + 1
+            },
+            {
+                where: {
+                    blog_id: blogId
+                }
+            })
+            if(increaseLikes){
+                sendResponse({"state": "success", "message": "Blog liked successfully"}, resp)
+            }
+        }else{
+            sendResponse({"state": "failed", "message": "Coulndn't like blog"}, resp)
         }
     }
+
 })
 
 router.get("/:blogId/save", async (req, resp) => {
@@ -512,6 +514,61 @@ router.put("/:blogId/update", async (req, resp) => {
         sendResponse(data, resp);
         return
     }
+});
+
+router.post("/:blogId/magicLink", async (req, resp) => {
+    const { blogId } = req.params;
+    var userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+
+    if(!validateUserInputAsNumber(blogId)){
+        var message = {state: "failed", message: "Invalid blog number"};
+        sendResponse(message, resp);
+        return
+    }
+
+    //checking if user has access to this blogId
+    const hasUserAccessToBlog = await blogsTB.findOne({
+        where: {
+            blog_id: blogId,
+            userid: userInfo.id
+        }
+    });
+
+    if(hasUserAccessToBlog == null){
+        var message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp);
+        return
+    }
+
+    //Creating a unpredictable token
+    const toBeHash = "|+|" + Date.now() + "|-|" + Math.random() + "|+|";
+    var blogToken = crypto.createHash('md5').update(toBeHash).digest('hex');
+    //Creating expire date for blog token
+    const currentTime = new Date();
+    const blogTokenEXP = new Date(currentTime.getTime() + 5 * 60 * 1000).getTime(); // Add 5 minutes in milliseconds
+    console.log(blogTokenEXP);
+    // Inserting to database
+    const addTokenToDB = await blogsTB.update({
+        blog_magicToken: blogToken,
+        magicToken_exp: blogTokenEXP
+    },
+    {
+        where: {
+            blog_id: blogId
+        }
+    }
+    );
+
+    if(addTokenToDB){
+        const blogMagicLink = "http://sancity.blog:8081/blogs/magicLink?token=" + blogToken;
+        const message = {state: "success", magicLink: blogMagicLink};
+        sendResponse(message, resp);
+        return
+    }else{
+        const message = {state: "failed", message: "Couldn't create magic link"};
+        sendResponse(message, resp);
+        return
+    } 
 })
 
 module.exports = router;
