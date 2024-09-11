@@ -3,14 +3,9 @@ const router = express.Router();
 const crypto = require('crypto')
 const { usersTB } = require("../../database");
 const jwt = require('jsonwebtoken');
+const { sendResponse } = require("../../utils/functions");
 var validator = require("email-validator");
 var nodemailer = require('nodemailer');
-
-function sendResponse(data, resp){
-    resp.setHeader("Content-Type", "application/json");
-    resp.send(JSON.stringify(data));
-    resp.end();
-}
 
 router.get("/check-auth", (req, resp) => {
     if(!req.cookies.token){

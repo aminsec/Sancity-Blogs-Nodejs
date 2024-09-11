@@ -2,23 +2,9 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
-
-function validateUserInputAsNumber(value) {
-    value = value.toString();
-    const validBlogNumberRG =  new RegExp('^[0-9]+$'); //This regex gets only numbers
-    const isValidBlogNumber = value.match(validBlogNumberRG);
-    if(isValidBlogNumber){
-        return true
-    }
-    return false
-}
-
-//Function to send normall messages
-function sendResponse(data, resp){
-    resp.setHeader("Content-Type", "application/json");
-    resp.send(JSON.stringify(data));
-    resp.end();
-}
+const { validateUserInputAsNumber } = require("../../utils/functions");
+const { sendResponse } = require("../../utils/functions");
+const { checkBlogInfo } = require("../../utils/functions");
 
 router.get("/", async (req, resp) => {
     //Getting all blogs from database
@@ -31,19 +17,22 @@ router.get("/", async (req, resp) => {
 
     //Getting userid from each blog, and tieing related user info to each blog object
     await Promise.all(allBlogs.map(async (blog) => {
+        var blog = blog.dataValues;
+        var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"]
+        var validatedBlog = checkBlogInfo(blog, keysToExtractFromBlog);
         const getUserInfo = await usersTB.findOne({
             where: {
-                userid: blog.userid
+                userid: validatedBlog.userid
             }
         });
         userInfo = {
-            username: getUserInfo.dataValues.username,
-            userid: getUserInfo.dataValues.userid,
-            profilePic: getUserInfo.dataValues.profilePic
+            username: getUserInfo.username,
+            userid: getUserInfo.userid,
+            profilePic: getUserInfo.profilePic
         };
-        blog.dataValues.user = userInfo;
+        validatedBlog.user = userInfo;
 
-        blogLists.push(blog);
+        blogLists.push(validatedBlog);
     }));
 
     sendResponse({"state": "success", "blogs": {"len": blogLists.length, "content": blogLists}}, resp);
@@ -51,6 +40,12 @@ router.get("/", async (req, resp) => {
 
 router.post("/magicLink", async (req, resp) => {
     const { token } = req.body;
+    //Validating user input 
+    if(token == undefined || (typeof token != "string")){
+        var message = {state: "failed", message: "Token not found"};
+        sendResponse(message, resp);
+        return
+    }
     //Checking if token is exist 
     const isTokenExist = await blogsTB.findOne({
         where: {
@@ -69,23 +64,22 @@ router.post("/magicLink", async (req, resp) => {
             return
         }else{
             //If token is valid, we show blog info
-            const blog = await blogsTB.findOne({
+            const getBlog = await blogsTB.findOne({
                 where: {
                     blog_magicToken: token
                 }
             })
             //Checking if something has backed from database
-            if(!blog){
+            if(!getBlog){
                 sendResponse({"state": "failed", "message": "Blog Not found"}, resp);
                 return
             }
-            //Making the likes hidden if the likes are private
-            if(blog.dataValues.showLikes == 0){
-                blog.dataValues.likes = "private" 
-            }
-        
+
+            //Checking blog Info
+            var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
+            var blog = checkBlogInfo(getBlog.dataValues, keysToExtractFromBlog);
             //getting the user of blog information
-            var blogUserId = blog.dataValues.userid;
+            var blogUserId = blog.userid;
             const blogUserInfo = await usersTB.findOne({
                 where: {
                     userid: blogUserId
@@ -97,46 +91,11 @@ router.post("/magicLink", async (req, resp) => {
                 profilePic: blogUserInfo.dataValues.profilePic
             };
         
-            blog.dataValues.user = blogUserDataObj;
-            //Trying to get the user's liked and saved blogs to see if user has liked or saved this post or not, if user is loggin
-            try {
-                var user = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-                const userLikes = await usersTB.findAll({
-                    attributes: ["likedPosts"],
-                    where: {
-                        userid: user.id
-                    }
-                })
-                const userSaveds = await usersTB.findAll({
-                    attributes: ["savedPosts"],
-                    where: {
-                        userid: user.id
-                    }
-                })
-                const likesData = userLikes[0].dataValues.likedPosts;
-                const likes = likesData.split(",");
-                const savesData = userSaveds[0].dataValues.savedPosts;
-                const saves = savesData.split(",");
-                
-                if(likes.includes(blogId)){
-                    blog.dataValues.isLiked = true;
-                }
-                if(saves.includes(blogId)){
-                    blog.dataValues.isSaved = true
-                }
-                sendResponse({"state": "success", "content": blog}, resp);
-            //if above block code goes into error, it means user is not loggin, then we just show the post without isLiked or isSaved
-            } catch (error) {
-                if(blog){
-                    sendResponse({"state": "success", "content": blog}, resp)
-                }else{
-                    const data = {"state": "failed", "message": "Not found"};
-                    sendResponse(data, resp)
-                }
-            }
+            blog.user = blogUserDataObj;
+            const data = {state: "success", content: blog};
+            sendResponse(data, resp);
+            return
         }
-
-
     }else{
         const message = {state: "failed", message: "Blog not found"};
         sendResponse(message, resp);
@@ -150,24 +109,23 @@ router.get("/:blogId", async (req, resp) => {
         sendResponse({"state": "failed", "message": "Not found"}, resp);
         return
     };
-    const blog = await blogsTB.findOne({
+    const getBlog = await blogsTB.findOne({
         where: {
             blog_id: blogId,
             is_public: 1
         }
     })
     //Checking if something has backed from database
-    if(!blog){
+    if(!getBlog){
         sendResponse({"state": "failed", "message": "Not found"}, resp);
         return
     }
-    //Making the likes hidden if the likes are private
-    if(blog.dataValues.showLikes == 0){
-        blog.dataValues.likes = "private" 
-    }
 
-    //getting the user of blog information
-    var blogUserId = blog.dataValues.userid;
+    //Checking blog Info
+    var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
+    var blog = checkBlogInfo(getBlog.dataValues, keysToExtractFromBlog);
+    //getting the user information of blog 
+    var blogUserId = blog.userid;
     const blogUserInfo = await usersTB.findOne({
         where: {
             userid: blogUserId
@@ -179,7 +137,7 @@ router.get("/:blogId", async (req, resp) => {
         profilePic: blogUserInfo.dataValues.profilePic
     };
 
-    blog.dataValues.user = blogUserDataObj;
+    blog.user = blogUserDataObj;
     //Trying to get the user's liked and saved blogs to see if user has liked or saved this post or not, if user is loggin
     try {
         var user = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
@@ -201,19 +159,20 @@ router.get("/:blogId", async (req, resp) => {
         const saves = savesData.split(",");
         
         if(likes.includes(blogId)){
-            blog.dataValues.isLiked = true;
+            blog.isLiked = true;
         }
         if(saves.includes(blogId)){
-            blog.dataValues.isSaved = true
+            blog.isSaved = true
         }
         sendResponse({"state": "success", "content": blog}, resp);
     //if above block code goes into error, it means user is not loggin, then we just show the post without isLiked or isSaved
     } catch (error) {
         if(blog){
-            sendResponse({"state": "success", "content": blog}, resp)
+            sendResponse({"state": "success", "content": blog}, resp);
+            return
         }else{
             const data = {"state": "failed", "message": "Not found"};
-            sendResponse(data, resp)
+            sendResponse(data, resp);
         }
     }
 })
