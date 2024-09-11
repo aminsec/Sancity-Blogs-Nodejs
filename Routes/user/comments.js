@@ -2,28 +2,25 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
-
-function removeItemFromArray(array, item){
-    const indexOfItem = array.indexOf(item);
-    if (indexOfItem > -1){
-        array.splice(indexOfItem, 1);
-    }
-    return array
-}
-
-function sendResponse(data, resp){
-    resp.setHeader("Content-Type", "application/json");
-    resp.send(JSON.stringify(data));
-    resp.end();
-}
-
+const { validateUserInputAsNumber } = require("../../utils/functions");
+const { sendResponse } = require("../../utils/functions");
+const { removeItemFromArray } = require("../../utils/functions");
 
 router.post("/:blogId/addComment", async (req, resp) => {
     var { blogId } = req.params;
+    if(!validateUserInputAsNumber(blogId)){
+        sendResponse({state: "failed", message: "Invalid blog Id"}, resp);
+        return
+    }
     var { comment } = req.body;
     var userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
     var invalidInputRegex = new RegExp("^\\s+$");
 
+    //Validation comment content
+    if(comment == undefined){
+        sendResponse({state: "failed", message: "comment parameter required"}, resp);
+        return
+    }
     if(comment == ""){
         sendResponse({state: "failed", message: "Leave a valid comment"}, resp);
         return
@@ -111,7 +108,6 @@ router.get("/:commentId/like", async (req, resp) => {
                 }
             })
             var likesOfComment = getLikesOfcomment.dataValues.commentLikes;
-            console.log("The likes: ", likesOfComment)
             likesOfComment -= 1;
             //Inserting updated likes 
             const updateLikesOfComment = await commentsTB.update({

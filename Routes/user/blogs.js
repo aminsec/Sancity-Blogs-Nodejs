@@ -5,22 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
-
-function sendResponse(data, resp){
-    resp.setHeader("Content-Type", "application/json");
-    resp.send(JSON.stringify(data));
-    resp.end();
-}
-
-function validateUserInputAsNumber(value) {
-    value = value.toString();
-    const validBlogNumberRG =  new RegExp('^[0-9]+$'); //This regex gets only numbers
-    const isValidBlogNumber = value.match(validBlogNumberRG);
-    if(isValidBlogNumber){
-        return true
-    }
-    return false
-}
+const { validateUserInputAsNumber } = require("../../utils/functions");
+const { sendResponse } = require("../../utils/functions");
 
 router.get("/", (req, resp) => {
     var blogs = []

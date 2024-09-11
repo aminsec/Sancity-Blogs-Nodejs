@@ -1,13 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { usersTB, blogsTB } = require("../../database");
-
-//Function to send normall messages
-function sendResponse(data, resp){
-    resp.setHeader("Content-Type", "application/json");
-    resp.send(JSON.stringify(data));
-    resp.end();
-}
+const { sendResponse } = require("../../utils/functions");
+const { checkBlogInfo } = require("../../utils/functions");
 
 router.get("/search", async (req, resp) => {
     if(!req.query.q){
@@ -20,6 +15,9 @@ router.get("/search", async (req, resp) => {
     var blogsScore = {};
     var sortedBlogsScore = new Map(); //using map to save the add sorting. (Object doesn't support)
     var sortedRelatedBlogs = [];
+    var validatedSortedRelatedBlogs = [];
+    var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"]
+
     //Getting all blogs
     const allBlogs = await blogsTB.findAll({
         where: {
@@ -45,7 +43,7 @@ router.get("/search", async (req, resp) => {
     }
 
 
-    //removing most unrelated blogs that has 0 score
+    //removing unrelated blogs that has 0 score
     for(vals in blogsScore){
         if(blogsScore[vals] == 0){
             delete blogsScore[vals]
@@ -94,8 +92,14 @@ router.get("/search", async (req, resp) => {
         })
         sortedRelatedBlogs[index].user = {username: userInfo.dataValues.username, profilePic: "/statics/img/ProfileDefault.png"}
     }
-    
-    sendResponse({state: "success", length: sortedRelatedBlogs.length, blogs: sortedRelatedBlogs}, resp)
+
+
+    for(index in sortedRelatedBlogs){
+        const validatedBlog = checkBlogInfo(sortedRelatedBlogs[index], keysToExtractFromBlog);
+        validatedSortedRelatedBlogs.push(validatedBlog);
+    }
+
+    sendResponse({state: "success", length: validatedSortedRelatedBlogs.length, blogs: validatedSortedRelatedBlogs}, resp);
 });
 
 module.exports = router;

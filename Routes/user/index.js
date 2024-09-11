@@ -5,12 +5,8 @@ const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
-
-function sendResponse(data, resp){
-    resp.setHeader("Content-Type", "application/json");
-    resp.send(JSON.stringify(data));
-    resp.end();
-}
+const { sendResponse } = require("../../utils/functions");
+const { checkBlogInfo } = require("../../utils/functions");
 
 router.get("/info", async(req, resp) => {
     const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
@@ -248,24 +244,27 @@ router.get("/favorites", async (req, resp) => {
         var savedBlogsList = [];
         for(var i = 0; i < blogsArray.length; i++){
             var blogsInfo = {}
-            const blogData = await blogsTB.findOne({
+            const getBlogData = await blogsTB.findOne({
                 where: {
                     blog_id: blogsArray[i],
                     is_public: 1
                 }
             })
             //pass if the blog is deleted
-            if(blogData == null){
+            if(getBlogData == null){
                 continue
             }
+
+            var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
+            var blogData = checkBlogInfo(getBlogData.dataValues, keysToExtractFromBlog);
             const userBLogData = await usersTB.findOne({
                 where: {
-                    userid: blogData.dataValues.userid
+                    userid: blogData.userid
                 }
             })
 
-            blogsInfo.user = {username: userBLogData.dataValues.username, profilePic: userBLogData.profilePic};
-            blogsInfo.content = blogData.dataValues
+            blogsInfo.user = {username: userBLogData.dataValues.username, profilePic: userBLogData.dataValues.profilePic};
+            blogsInfo.content = blogData;
             savedBlogsList.push(blogsInfo)
         
 
@@ -302,23 +301,26 @@ router.get("/likes", async (req, resp) => {
         var likedBlogsList = [];
         for(var i = 0; i < blogsArray.length; i++){
             var blogsInfo = {}
-            const blogData = await blogsTB.findOne({
+            const getBlogData = await blogsTB.findOne({
                 where: {
                     blog_id: blogsArray[i],
                     is_public: 1
                 }
             })
-            if(blogData == null){
+            if(getBlogData == null){
                 continue
             }
+
+            var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
+            var blogData = checkBlogInfo(getBlogData.dataValues, keysToExtractFromBlog);
             const userBLogData = await usersTB.findOne({
                 where: {
-                    userid: blogData.dataValues.userid
+                    userid: blogData.userid
                 }
             })
 
             blogsInfo.user = {username: userBLogData.dataValues.username, profilePic: userBLogData.profilePic};
-            blogsInfo.content = blogData.dataValues
+            blogsInfo.content = blogData;
             likedBlogsList.push(blogsInfo)
         }
         return likedBlogsList;
