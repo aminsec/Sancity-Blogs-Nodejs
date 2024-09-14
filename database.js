@@ -171,8 +171,24 @@ const commentsTB = sequelize.define("comments", {
     timestamps: false
 });
 
+const dead_sessionsTB = sequelize.define("dead_sessions", {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+    },
+
+    session: {
+        type: DataTypes.STRING
+    }
+}, {
+    timestamps: false
+})
+
 sequelize.sync();
 
 exports.usersTB = usersTB;
 exports.commentsTB = commentsTB;
 exports.blogsTB = blogsTB;
+exports.dead_sessionsTB = dead_sessionsTB;
+exports.sequelize = sequelize

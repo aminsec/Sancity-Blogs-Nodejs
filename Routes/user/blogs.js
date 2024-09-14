@@ -532,7 +532,6 @@ router.post("/:blogId/magicLink", async (req, resp) => {
     //Creating expire date for blog token
     const currentTime = new Date();
     const blogTokenEXP = new Date(currentTime.getTime() + 5 * 60 * 1000).getTime(); // Add 5 minutes in milliseconds
-    console.log(blogTokenEXP);
     // Inserting to database
     const addTokenToDB = await blogsTB.update({
         blog_magicToken: blogToken,
