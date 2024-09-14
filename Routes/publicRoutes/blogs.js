@@ -201,8 +201,8 @@ router.get("/:blogId/comments", async (req, resp) => {
             where: {
                 blog_id: blogId
             }
-        })
-    
+        });
+        
         const preparingComments = async () => {
             for(index in comments){
                 var commentData = {};

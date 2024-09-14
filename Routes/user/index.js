@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
-const { usersTB, blogsTB } = require("../../database");
+const { usersTB, blogsTB, dead_sessionsTB ,sequelize } = require("../../database");
 const { sendResponse } = require("../../utils/functions");
 const { checkBlogInfo } = require("../../utils/functions");
 
@@ -327,6 +327,65 @@ router.get("/likes", async (req, resp) => {
     }
     var blogsContent = await getBlogsData();
     sendResponse({state: "success", content: blogsContent}, resp);
+});
+
+router.delete("/deleteAccount", async (req, resp) => {
+    const { token } = req.cookies
+    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { password, confirm_password } = req.body;
+
+    if(!password || !confirm_password){
+        const message = {state: "failed", message: "All fields required"};
+        sendResponse(message, resp);
+        return
+    }
+
+    const passwordHash = crypto.createHash('md5').update(password).digest('hex');
+    const confirm_passwordHash = crypto.createHash('md5').update(confirm_password).digest('hex');
+
+    if(passwordHash !== confirm_passwordHash){
+        const message = {state: "failed", message: "Passwords does not match"};
+        sendResponse(message, resp);
+        return
+    }
+
+    //Checking if password is correct 
+    const getUserInfo = await usersTB.findOne({
+        attributes: ["password"],
+        where: {
+            userid: userInfo.id
+        }
+    });
+    if(getUserInfo){
+        const userPassword = getUserInfo.dataValues.password;
+        if(userPassword !== passwordHash){
+            const message = {state: "failed", message: "Incorrect password"};
+            sendResponse(message, resp);
+            return
+        }
+    }
+
+    //Getting all tables name to delete all records with just one command
+    const allTablesName = await sequelize.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'sancity'", {type: sequelize.QueryTypes.SELECT});
+    const blackListTables = ["dead_sessions"];
+
+    const deleteAccount = async () => {
+        for(index in allTablesName){
+            const tableName = allTablesName[index].TABLE_NAME;
+            if(blackListTables.includes(tableName)){
+                continue
+            }
+            const deleteUserAccount = await sequelize.query(`delete from ${tableName} where userid = ${userInfo.id}`, {type: sequelize.QueryTypes.DELETE});
+        }
+    }
+    await deleteAccount();
+    //revoking session
+    const revokeSession = await dead_sessionsTB.create({
+        session: token
+    });
+
+    const message = {state: "success", message: "Account deleted succussfully"};
+    sendResponse(message, resp);
 })
 
 module.exports = router;

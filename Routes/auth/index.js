@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto')
-const { usersTB } = require("../../database");
+const { usersTB, dead_sessionsTB } = require("../../database");
 const jwt = require('jsonwebtoken');
 const { sendResponse } = require("../../utils/functions");
 var validator = require("email-validator");
 var nodemailer = require('nodemailer');
 
-router.get("/check-auth", (req, resp) => {
+router.get("/check-auth", async (req, resp) => {
     if(!req.cookies.token){
         const data = {"message": false};
         resp.setHeader("content-type", "application/json");
@@ -19,6 +19,20 @@ router.get("/check-auth", (req, resp) => {
     try {
         const isValidToken = jwt.verify(token, process.env.JWT_SECRET);
         if(isValidToken){
+            //check if the token is a revoked token
+            const isRevokedToken = await dead_sessionsTB.findOne({
+                where: {
+                    session: token
+                }
+            });
+            if(isRevokedToken){
+                const data = {"message": false};
+                resp.setHeader("content-type", "application/json");
+                resp.send(JSON.stringify(data));
+                resp.end();
+                return
+            }
+
             const data = {"message": true};
             resp.setHeader("content-type", "application/json");
             resp.send(JSON.stringify(data));
@@ -237,10 +251,31 @@ router.post("/forgot-password", (req, resp) => {
 
 })
 
-router.get("/logout", (req, resp) => {
+router.get("/logout", async (req, resp) => {
+    if(req.cookies.token){
+        try {
+            //validation the cookie value to insert only valid jwt token to dead_sessions 
+            jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+            const revokeToken = await dead_sessionsTB.create({
+                session: req.cookies.token
+            })
+            resp.cookie("token", "deleted");
+            resp.redirect("/");
+            resp.end();
+            return
+
+        } catch (error) {
+            resp.cookie("token", "deleted");
+            resp.redirect("/");
+            resp.end();
+            return
+        }
+    }
+
     resp.cookie("token", "deleted");
     resp.redirect("/");
     resp.end();
-})
+
+});
 
 module.exports = router;
