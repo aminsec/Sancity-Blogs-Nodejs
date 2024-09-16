@@ -13,6 +13,7 @@ router.get("/check-auth", async (req, resp) => {
         resp.setHeader("content-type", "application/json");
         resp.send(JSON.stringify(data));
         resp.end();
+        return
     }
 
     const token = req.cookies.token;
@@ -37,6 +38,7 @@ router.get("/check-auth", async (req, resp) => {
             resp.setHeader("content-type", "application/json");
             resp.send(JSON.stringify(data));
             resp.end();
+            return
         }
     } catch (error) {
         const data = {"message": false};
