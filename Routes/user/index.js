@@ -417,6 +417,20 @@ router.get("/notifications", async (req, resp) => {
 
     const message = {state: "success", notifications: readyNotifications};
     sendResponse(message, resp);
+});
+
+router.post("/notifications", async (req, resp) => {
+    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const seenNotifs = await notificationsTB.update({
+        seen: 1
+    }, {
+        where: {
+            userid: userInfo.id
+        }
+    });
+
+    const message = {state: "success"};
+    sendResponse(message, resp);
 })
 
 module.exports = router;

@@ -316,11 +316,10 @@ router.get("/:blogId/like", async (req, resp) => {
                 //Sending notification to user
                 const notifInfo = {
                     userid: checkBlogAccessble.dataValues.userid,
+                    notif_title: `${user.username} liked your blog`,
                     acted_userid: user.id,
                     action_name: "liked_blog",
-                    blog_id: checkBlogAccessble.dataValues.blog_id,
-                    comment_text: null,
-                    date: Date.now().toString(),
+                    blog_id: checkBlogAccessble.dataValues.blog_id
                 }
                 createNotification(notifInfo);
             }

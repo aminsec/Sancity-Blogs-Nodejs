@@ -187,7 +187,7 @@ router.get("/:blogId/comments", async (req, resp) => {
         return
     }
 
-    //Checking if comments of blog are public
+    //Checking if comments of blog are public and the blog is not private
     const areCommentsOn = await blogsTB.findOne({
         where: {
             blog_id: blogId,
@@ -247,5 +247,47 @@ router.get("/:blogId/comments", async (req, resp) => {
         sendResponse({state: "failed", message: "Not found"}, resp);
     }
 });
+
+router.get("/:blogId/comments/:commentId", async (req, resp) => {
+    const { commentId } = req.params;
+    const { blogId } = req.params;
+    if(!validateUserInputAsNumber(commentId)){
+        const message = {state: "failed", message: "Comment not found"};
+        sendResponse(message, resp);
+        return
+    }
+    if(!validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp);
+        return
+    }
+
+    //Checking if comments of blog are public and the blog is not private
+    const areCommentsOn = await blogsTB.findOne({
+        where: {
+            blog_id: blogId,
+            isCommentOff: 0,
+            is_public: 1
+        }
+    });
+
+    if(areCommentsOn){
+        const getComment = await commentsTB.findOne({
+            where: {
+                commentId: commentId,
+                blog_id: blogId
+            }
+        });
+
+        if(getComment){
+            const commentInfo = getComment.dataValues;
+            const message = {state: "success", comment: commentInfo};
+            sendResponse(message, resp);
+        }else{
+            const message = {state: "failed", message: "Comment not found"};
+            sendResponse(message, resp);
+        }
+    }
+})
 
 module.exports = router;
