@@ -4,15 +4,7 @@ const crypto = require('crypto');
 const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
-<<<<<<< HEAD
-<<<<<<< HEAD
 const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB } = require("../../database");
-=======
-const { usersTB, blogsTB, dead_sessionsTB ,sequelize } = require("../../database");
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
-=======
-const { usersTB, blogsTB, dead_sessionsTB ,sequelize } = require("../../database");
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 const { sendResponse } = require("../../utils/functions");
 const { checkBlogInfo } = require("../../utils/functions");
 
@@ -394,8 +386,6 @@ router.delete("/deleteAccount", async (req, resp) => {
 
     const message = {state: "success", message: "Account deleted succussfully"};
     sendResponse(message, resp);
-<<<<<<< HEAD
-<<<<<<< HEAD
 });
 
 router.get("/notifications", async (req, resp) => {
@@ -427,10 +417,6 @@ router.get("/notifications", async (req, resp) => {
 
     const message = {state: "success", notifications: readyNotifications};
     sendResponse(message, resp);
-=======
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
-=======
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 })
 
 module.exports = router;

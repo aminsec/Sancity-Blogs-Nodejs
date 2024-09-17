@@ -171,8 +171,6 @@ const commentsTB = sequelize.define("comments", {
     timestamps: false
 });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 const notificationsTB = sequelize.define("notifications", {
     id: {
         type: DataTypes.INTEGER,
@@ -218,10 +216,6 @@ const notificationsTB = sequelize.define("notifications", {
     timestamps: false
 })
 
-=======
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
-=======
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 const dead_sessionsTB = sequelize.define("dead_sessions", {
     id: {
         type: DataTypes.INTEGER,
@@ -241,16 +235,6 @@ sequelize.sync();
 exports.usersTB = usersTB;
 exports.commentsTB = commentsTB;
 exports.blogsTB = blogsTB;
-<<<<<<< HEAD
-<<<<<<< HEAD
 exports.notificationsTB = notificationsTB;
 exports.dead_sessionsTB = dead_sessionsTB;
 exports.sequelize = sequelize;
-=======
-exports.dead_sessionsTB = dead_sessionsTB;
-exports.sequelize = sequelize
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
-=======
-exports.dead_sessionsTB = dead_sessionsTB;
-exports.sequelize = sequelize
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c

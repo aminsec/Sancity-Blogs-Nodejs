@@ -7,13 +7,7 @@ const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber } = require("../../utils/functions");
 const { sendResponse } = require("../../utils/functions");
-<<<<<<< HEAD
-<<<<<<< HEAD
 const { createNotification } = require("../../utils/functions");
-=======
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
-=======
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 
 router.get("/", (req, resp) => {
     var blogs = []
@@ -318,8 +312,6 @@ router.get("/:blogId/like", async (req, resp) => {
                 }
             })
             if(increaseLikes){
-<<<<<<< HEAD
-<<<<<<< HEAD
                 sendResponse({"state": "success", "message": "Blog liked successfully"}, resp);
                 //Sending notification to user
                 const notifInfo = {
@@ -331,12 +323,6 @@ router.get("/:blogId/like", async (req, resp) => {
                     date: Date.now().toString(),
                 }
                 createNotification(notifInfo);
-=======
-                sendResponse({"state": "success", "message": "Blog liked successfully"}, resp)
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
-=======
-                sendResponse({"state": "success", "message": "Blog liked successfully"}, resp)
->>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
             }
         }else{
             sendResponse({"state": "failed", "message": "Coulndn't like blog"}, resp)
