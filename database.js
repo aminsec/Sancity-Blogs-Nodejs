@@ -171,6 +171,57 @@ const commentsTB = sequelize.define("comments", {
     timestamps: false
 });
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+const notificationsTB = sequelize.define("notifications", {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+        allowNull: false
+    },
+
+    userid: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+
+    acted_userid: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+
+    action_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+
+    blog_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+
+    comment_text: {
+        type: DataTypes.STRING
+    },
+
+    seen: {
+        type: DataTypes.TINYINT,
+        allowNull: false
+    },
+
+    timestamp: {
+        type: DataTypes.STRING,
+        allowNull: false
+    }
+}, {
+    timestamps: false
+})
+
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 const dead_sessionsTB = sequelize.define("dead_sessions", {
     id: {
         type: DataTypes.INTEGER,
@@ -190,5 +241,16 @@ sequelize.sync();
 exports.usersTB = usersTB;
 exports.commentsTB = commentsTB;
 exports.blogsTB = blogsTB;
+<<<<<<< HEAD
+<<<<<<< HEAD
+exports.notificationsTB = notificationsTB;
+exports.dead_sessionsTB = dead_sessionsTB;
+exports.sequelize = sequelize;
+=======
 exports.dead_sessionsTB = dead_sessionsTB;
 exports.sequelize = sequelize
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
+=======
+exports.dead_sessionsTB = dead_sessionsTB;
+exports.sequelize = sequelize
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c

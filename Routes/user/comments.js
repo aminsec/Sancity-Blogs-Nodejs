@@ -5,6 +5,13 @@ const { commentsTB, usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber } = require("../../utils/functions");
 const { sendResponse } = require("../../utils/functions");
 const { removeItemFromArray } = require("../../utils/functions");
+<<<<<<< HEAD
+<<<<<<< HEAD
+const { createNotification } = require("../../utils/functions");
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 
 router.post("/:blogId/addComment", async (req, resp) => {
     var { blogId } = req.params;
@@ -63,6 +70,22 @@ router.post("/:blogId/addComment", async (req, resp) => {
 
     if(addComment){
         sendResponse({state: "success", message: "Comment added successfully"}, resp);
+<<<<<<< HEAD
+<<<<<<< HEAD
+        //Sending notification to user
+        const notifInfo = {
+            userid: isPublic.dataValues.userid,
+            acted_userid: userInfo.id,
+            action_name: "commented_blog",
+            blog_id: isPublic.dataValues.blog_id,
+            comment_text: comment,
+            date: Date.now().toString(),
+        }
+        createNotification(notifInfo);
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
         return
     }
 });
@@ -143,6 +166,22 @@ router.get("/:commentId/like", async (req, resp) => {
             })
             if(updateLikesOfComment){
                 messageToSend = {state: "success", message: "Comment liked successfully"};
+<<<<<<< HEAD
+<<<<<<< HEAD
+                //Sending notification to user
+                const notifInfo = {
+                    userid: isCommentExist.dataValues.userid,
+                    acted_userid: userInfo.id,
+                    action_name: "liked_comment",
+                    blog_id: isCommentExist.dataValues.blog_id,
+                    comment_text: isCommentExist.dataValues.comment_text,
+                    date: Date.now().toString(),
+                }
+                createNotification(notifInfo);
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
             }  
         }
         

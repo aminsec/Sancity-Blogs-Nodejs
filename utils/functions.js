@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+<<<<<<< HEAD
+const { notificationsTB } = require("../database");
+
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 function validateUserInputAsNumber(value) {
     value = value.toString();
     const validBlogNumberRG =  new RegExp('^[0-9]+$'); //This regex gets only numbers
@@ -38,9 +46,36 @@ function checkBlogInfo(blogData, keys){
     return validBlog;
 };
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+async function createNotification(notif){
+    const createNotif = await notificationsTB.create({
+        userid: notif.userid,
+        acted_userid: notif.acted_userid,
+        action_name: notif.action_name,
+        blog_id: notif.blog_id,
+        comment_text: notif.comment_text,
+        timestamp: notif.date,
+        seen: 0
+    })
+}
+
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
+=======
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 module.exports = {
     validateUserInputAsNumber,
     sendResponse,
     removeItemFromArray,
+<<<<<<< HEAD
+<<<<<<< HEAD
+    checkBlogInfo,
+    createNotification
+=======
     checkBlogInfo
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
+=======
+    checkBlogInfo
+>>>>>>> c98bbde915df0cf95bb914694af3e1844627707c
 }
