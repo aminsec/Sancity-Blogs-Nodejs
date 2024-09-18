@@ -74,8 +74,11 @@ router.post("/:blogId/addComment", async (req, resp) => {
             comment_id: addComment.dataValues.commentId,
 
         }
-        createNotification(notifInfo);
-        return
+        if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
+            createNotification(notifInfo);
+            return
+        }
+
     }
 });
 
@@ -156,15 +159,21 @@ router.get("/:commentId/like", async (req, resp) => {
             if(updateLikesOfComment){
                 messageToSend = {state: "success", message: "Comment liked successfully"};
                 //Sending notification to user
-                const notifInfo = {
-                    userid: isCommentExist.dataValues.userid,
-                    notif_title: `${userInfo.username} liked your comment`,
-                    acted_userid: userInfo.id,
-                    action_name: "liked_comment",
-                    blog_id: isCommentExist.dataValues.blog_id,
-                    comment_id: isCommentExist.dataValues.commentId
-                }
-                createNotification(notifInfo);
+                 
+                    const notifInfo = {
+                        userid: isCommentExist.dataValues.userid,
+                        notif_title: `${userInfo.username} liked your comment`,
+                        acted_userid: userInfo.id,
+                        action_name: "liked_comment",
+                        blog_id: isCommentExist.dataValues.blog_id,
+                        comment_id: isCommentExist.dataValues.commentId
+                    }
+                    if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
+                        createNotification(notifInfo);
+                    }
+                    
+                
+ 
             }  
         }
         

@@ -388,49 +388,4 @@ router.delete("/deleteAccount", async (req, resp) => {
     sendResponse(message, resp);
 });
 
-router.get("/notifications", async (req, resp) => {
-    const readyNotifications = [];
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    const userid = userInfo.id;
-
-    const notifcations = await notificationsTB.findAll({
-        where: {
-            userid: userid
-        }
-    });
-
-    //Converting timestamp to (5 sep) format
-    for(index in notifcations){
-        const notifInfo = notifcations[index].dataValues;
-        const timestamp = new Date();
-        // Use Intl.DateTimeFormat to format the date
-        const formatter = new Intl.DateTimeFormat('en-GB', {
-        day: 'numeric',
-        month: 'short'
-        });
-
-        const formattedDate = formatter.format(timestamp);
-        delete notifInfo.timestamp
-        notifInfo.date = formattedDate;
-        readyNotifications.push(notifInfo);
-    };
-
-    const message = {state: "success", notifications: readyNotifications};
-    sendResponse(message, resp);
-});
-
-router.post("/notifications", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    const seenNotifs = await notificationsTB.update({
-        seen: 1
-    }, {
-        where: {
-            userid: userInfo.id
-        }
-    });
-
-    const message = {state: "success"};
-    sendResponse(message, resp);
-})
-
 module.exports = router;

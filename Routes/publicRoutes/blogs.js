@@ -251,6 +251,7 @@ router.get("/:blogId/comments", async (req, resp) => {
 router.get("/:blogId/comments/:commentId", async (req, resp) => {
     const { commentId } = req.params;
     const { blogId } = req.params;
+    
     if(!validateUserInputAsNumber(commentId)){
         const message = {state: "failed", message: "Comment not found"};
         sendResponse(message, resp);

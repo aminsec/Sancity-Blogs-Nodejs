@@ -321,7 +321,10 @@ router.get("/:blogId/like", async (req, resp) => {
                     action_name: "liked_blog",
                     blog_id: checkBlogAccessble.dataValues.blog_id
                 }
-                createNotification(notifInfo);
+                if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
+                    createNotification(notifInfo);
+                    return
+                }
             }
         }else{
             sendResponse({"state": "failed", "message": "Coulndn't like blog"}, resp)
