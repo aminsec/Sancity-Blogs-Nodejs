@@ -82,22 +82,25 @@ router.get("/search", async (req, resp) => {
         }
     }
 
-    //Getting each blog user info
-    for(index in sortedRelatedBlogs){
-        var userId = sortedRelatedBlogs[index].userid;
-        const userInfo = await usersTB.findOne({
-            where: {
-                userid: userId
-            }
-        })
-        sortedRelatedBlogs[index].user = {username: userInfo.dataValues.username, profilePic: "/statics/img/ProfileDefault.png"}
-    }
-
 
     for(index in sortedRelatedBlogs){
         const validatedBlog = checkBlogInfo(sortedRelatedBlogs[index], keysToExtractFromBlog);
         validatedSortedRelatedBlogs.push(validatedBlog);
     }
+
+    //Getting each blog user info
+    for(index in validatedSortedRelatedBlogs){
+        var userId = validatedSortedRelatedBlogs[index].userid;
+        const userInfo = await usersTB.findOne({
+            where: {
+                userid: userId
+            }
+        })
+        validatedSortedRelatedBlogs[index].user = {userid: userInfo.dataValues.userid,username: userInfo.dataValues.username, profilePic: "/statics/img/ProfileDefault.png"}
+    }
+
+
+
 
     sendResponse({state: "success", length: validatedSortedRelatedBlogs.length, blogs: validatedSortedRelatedBlogs}, resp);
 });
