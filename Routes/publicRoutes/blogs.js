@@ -181,13 +181,32 @@ router.get("/:blogId", async (req, resp) => {
 router.get("/:blogId/comments", async (req, resp) => {
     var data = {state: "success", comments: []};
     var { blogId } = req.params;
+    var { limit } = req.query;
+    var { offset } = req.query;
 
     if(!validateUserInputAsNumber(blogId)){
         sendResponse({state: "failed", message: "Blog not found"}, resp);
         return
     }
 
-    //Checking if comments of blog are public
+    //Validating limit and offset value
+    if(!limit || !offset){
+        const message = {state: "failed", message: "Invalid limit or offset value"};
+        sendResponse(message, resp);
+        return
+    }
+
+    if(!validateUserInputAsNumber(limit) || !validateUserInputAsNumber(offset)){
+        const message = {state: "failed", message: "Invalid limit or offset value"};
+        sendResponse(message, resp);
+        return
+    }
+
+    //Converting
+    limit = Number(limit);
+    offset = Number(offset);
+
+    //Checking if comments of blog are public and the blog is not private
     const areCommentsOn = await blogsTB.findOne({
         where: {
             blog_id: blogId,
@@ -200,8 +219,18 @@ router.get("/:blogId/comments", async (req, resp) => {
         const comments = await commentsTB.findAll({
             where: {
                 blog_id: blogId
+            },
+           limit: limit,
+           offset: offset
+        });
+
+        const getAllCommentsLen = await commentsTB.findAll({
+            where: {
+                blog_id: blogId
             }
         });
+        //Giving all comments count, we need it in frontend
+        data.allCommentsLen = getAllCommentsLen.length;
         
         const preparingComments = async () => {
             for(index in comments){
@@ -210,6 +239,7 @@ router.get("/:blogId/comments", async (req, resp) => {
                 commentData.Id = comments[index].dataValues.commentId;
                 commentData.likes = comments[index].dataValues.commentLikes;
                 var commentedUserId = comments[index].dataValues.userid;
+                commentData.date = comments[index].dataValues.commentedAt;
                 const commentedUserInfo = await usersTB.findOne({
                     attributes: ["profilePic", "username"],
                     where: {
@@ -247,5 +277,48 @@ router.get("/:blogId/comments", async (req, resp) => {
         sendResponse({state: "failed", message: "Not found"}, resp);
     }
 });
+
+router.get("/:blogId/comments/:commentId", async (req, resp) => {
+    const { commentId } = req.params;
+    const { blogId } = req.params;
+    
+    if(!validateUserInputAsNumber(commentId)){
+        const message = {state: "failed", message: "Comment not found"};
+        sendResponse(message, resp);
+        return
+    }
+    if(!validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp);
+        return
+    }
+
+    //Checking if comments of blog are public and the blog is not private
+    const areCommentsOn = await blogsTB.findOne({
+        where: {
+            blog_id: blogId,
+            isCommentOff: 0,
+            is_public: 1
+        }
+    });
+
+    if(areCommentsOn){
+        const getComment = await commentsTB.findOne({
+            where: {
+                commentId: commentId,
+                blog_id: blogId
+            }
+        });
+
+        if(getComment){
+            const commentInfo = getComment.dataValues;
+            const message = {state: "success", comment: commentInfo};
+            sendResponse(message, resp);
+        }else{
+            const message = {state: "failed", message: "Comment not found"};
+            sendResponse(message, resp);
+        }
+    }
+})
 
 module.exports = router;

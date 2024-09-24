@@ -67,14 +67,18 @@ router.post("/:blogId/addComment", async (req, resp) => {
         //Sending notification to user
         const notifInfo = {
             userid: isPublic.dataValues.userid,
+            notif_title: `${userInfo.username} commented on your blog`,
             acted_userid: userInfo.id,
             action_name: "commented_blog",
             blog_id: isPublic.dataValues.blog_id,
-            comment_text: comment,
-            date: Date.now().toString(),
+            comment_id: addComment.dataValues.commentId,
+
         }
-        createNotification(notifInfo);
-        return
+        if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
+            createNotification(notifInfo);
+            return
+        }
+
     }
 });
 
@@ -155,15 +159,21 @@ router.get("/:commentId/like", async (req, resp) => {
             if(updateLikesOfComment){
                 messageToSend = {state: "success", message: "Comment liked successfully"};
                 //Sending notification to user
-                const notifInfo = {
-                    userid: isCommentExist.dataValues.userid,
-                    acted_userid: userInfo.id,
-                    action_name: "liked_comment",
-                    blog_id: isCommentExist.dataValues.blog_id,
-                    comment_text: isCommentExist.dataValues.comment_text,
-                    date: Date.now().toString(),
-                }
-                createNotification(notifInfo);
+                 
+                    const notifInfo = {
+                        userid: isCommentExist.dataValues.userid,
+                        notif_title: `${userInfo.username} liked your comment`,
+                        acted_userid: userInfo.id,
+                        action_name: "liked_comment",
+                        blog_id: isCommentExist.dataValues.blog_id,
+                        comment_id: isCommentExist.dataValues.commentId
+                    }
+                    if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
+                        createNotification(notifInfo);
+                    }
+                    
+                
+ 
             }  
         }
         

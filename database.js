@@ -195,12 +195,11 @@ const notificationsTB = sequelize.define("notifications", {
     },
 
     blog_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
 
-    comment_text: {
-        type: DataTypes.STRING
+    comment_id: {
+        type: DataTypes.INTEGER
     },
 
     seen: {
@@ -209,6 +208,11 @@ const notificationsTB = sequelize.define("notifications", {
     },
 
     timestamp: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+
+    notif_title: {
         type: DataTypes.STRING,
         allowNull: false
     }

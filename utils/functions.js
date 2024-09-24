@@ -45,9 +45,10 @@ async function createNotification(notif){
         userid: notif.userid,
         acted_userid: notif.acted_userid,
         action_name: notif.action_name,
-        blog_id: notif.blog_id,
-        comment_text: notif.comment_text,
-        timestamp: notif.date,
+        blog_id: notif.blog_id ? notif.blog_id : null,
+        notif_title: notif.notif_title,
+        comment_id: notif.comment_id ? notif.comment_id : null,
+        timestamp: Date.now().toString(),
         seen: 0
     })
 }
