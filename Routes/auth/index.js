@@ -159,8 +159,7 @@ router.post("/signup", async (req, resp) => {
     }
 
     //Inserting user
-    var datetime = new Date();
-    var createdTime = datetime.toISOString().slice(0,10);
+    var createdTime = Date.now().toString();
     let userHashPassword = crypto.createHash('md5').update(password).digest("hex"); //hashing the password to md5
     
     try {
