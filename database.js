@@ -39,7 +39,8 @@ const usersTB = sequelize.define("users", {
     },
 
     joinDate: {
-        type: DataTypes.DATE,
+        type: DataTypes.STRING,
+        defaultValue: "1726745639519",
         allowNull: false,
     },
 
@@ -114,7 +115,8 @@ const blogsTB = sequelize.define("blogs", {
         defaultValue: 0
     },
     createdAt: {
-        type: DataTypes.DATE
+        type: DataTypes.STRING,
+        defaultValue: "1726745639519"
     },
 
     blog_magicToken: {
@@ -146,7 +148,8 @@ const commentsTB = sequelize.define("comments", {
     },
 
     commentedAt: {
-        type: DataTypes.DATE,
+        type: DataTypes.STRING,
+        defaultValue: "1726745639519",
         allowNull: false,
     },
 

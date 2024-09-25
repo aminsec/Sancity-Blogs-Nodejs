@@ -104,8 +104,7 @@ router.post("/new", async (req, resp) => {
     }
 
     //Getting blog created time
-    var datetime = new Date();
-    var createdTime = datetime.toISOString().slice(0,10);
+    var createdTime = Date.now().toString();
 
     try {
         const insertBlog = await blogsTB.create({

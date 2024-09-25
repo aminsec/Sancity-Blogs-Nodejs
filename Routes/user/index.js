@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
-const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB } = require("../../database");
+const { usersTB, blogsTB, dead_sessionsTB, sequelize } = require("../../database");
 const { sendResponse } = require("../../utils/functions");
 const { checkBlogInfo } = require("../../utils/functions");
 
