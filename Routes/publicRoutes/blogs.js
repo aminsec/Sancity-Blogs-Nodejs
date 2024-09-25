@@ -240,6 +240,7 @@ router.get("/:blogId/comments", async (req, resp) => {
                 commentData.likes = comments[index].dataValues.commentLikes;
                 var commentedUserId = comments[index].dataValues.userid;
                 commentData.date = comments[index].dataValues.commentedAt;
+                commentData.userid = comments[index].dataValues.userid;
                 const commentedUserInfo = await usersTB.findOne({
                     attributes: ["profilePic", "username"],
                     where: {
