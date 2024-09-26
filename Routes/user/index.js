@@ -21,7 +21,8 @@ router.get("/info", async(req, resp) => {
         email: getUserData.dataValues.email,
         joinDate: getUserData.dataValues.joinDate,
         role: getUserData.dataValues.role,
-        profilePic: getUserData.dataValues.profilePic
+        profilePic: getUserData.dataValues.profilePic,
+        bio: getUserData.dataValues.bio
     };
 
     sendResponse(userData, resp);
