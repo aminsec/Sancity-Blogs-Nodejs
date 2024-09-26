@@ -52,7 +52,7 @@ router.post("/:blogId/addComment", async (req, resp) => {
     }
     
     //Getting comment time 
-    var createdTime = Date.now().toString;
+    var createdTime = Date.now().toString();
 
     const addComment = await commentsTB.create({
         blog_id: blogId,
