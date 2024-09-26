@@ -263,7 +263,12 @@ router.get("/favorites", async (req, resp) => {
                 }
             })
 
-            blogsInfo.user = {username: userBLogData.dataValues.username, profilePic: userBLogData.dataValues.profilePic};
+            const blogUserInfo = {
+                userid: userBLogData.dataValues.userid,
+                username: userBLogData.dataValues.username, 
+                profilePic: userBLogData.dataValues.profilePic
+            }
+            blogsInfo.user = blogUserInfo;
             blogsInfo.content = blogData;
             savedBlogsList.push(blogsInfo)
         
@@ -319,7 +324,13 @@ router.get("/likes", async (req, resp) => {
                 }
             })
 
-            blogsInfo.user = {username: userBLogData.dataValues.username, profilePic: userBLogData.profilePic};
+            const blogUserInfo = {
+                userid: userBLogData.dataValues.userid,
+                username: userBLogData.dataValues.username, 
+                profilePic: userBLogData.dataValues.profilePic
+            };
+            
+            blogsInfo.user = blogUserInfo;
             blogsInfo.content = blogData;
             likedBlogsList.push(blogsInfo)
         }
