@@ -220,6 +220,9 @@ router.get("/:blogId/comments", async (req, resp) => {
             where: {
                 blog_id: blogId
             },
+            order: [
+                ["commentedAt", "DESC"]
+            ],
            limit: limit,
            offset: offset
         });
@@ -267,7 +270,7 @@ router.get("/:blogId/comments", async (req, resp) => {
                     }
 
                 } catch (error) {
-                   
+                   null
                 }
                 data.comments.push(commentData);
             }
