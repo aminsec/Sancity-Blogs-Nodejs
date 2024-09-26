@@ -15,7 +15,8 @@ router.get("/", async (req, resp) => {
         },
         order: [
             ["timestamp", "DESC"]
-        ]
+        ],
+        limit: 10
     });
 
     //Converting timestamp to (5 sep) format
