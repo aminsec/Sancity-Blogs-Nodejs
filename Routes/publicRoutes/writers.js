@@ -24,6 +24,7 @@ router.get("/:userid", async (req, resp) => {
         var data = {
             userid: userData.userid,
             username: userData.username,
+            bio: userData.bio,
             profilePic: userData.profilePic,
             joinDate: userData.joinDate
         }; 
