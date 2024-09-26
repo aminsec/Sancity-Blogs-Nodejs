@@ -30,21 +30,23 @@ router.get("/info", async(req, resp) => {
 
 router.put("/updateInfo", async (req, resp) => {
     const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    var { username, email} = req.body;
+    var { username, email, bio } = req.body;
     var usernameUpdated = false;
     var emailUpdated = false;
+    var bioUpdated = false;
 
-    if(username == undefined || email == undefined){
+    if(username == undefined || email == undefined || bio == undefined){
         const message = {"state": "failed", "message": "All fields required"};
         sendResponse(message, resp);
         return
     }
 
     //Checking for previes data to prevent temp query to database
-    if(username == userInfo.username && email == userInfo.email){
-        const message = {"state": "success", "message": "Nothing changed!"};
-        sendResponse(message, resp);
-        return
+    if(username == userInfo.username){
+        usernameUpdated = true;
+    }
+    if(email == userInfo.email){
+        emailUpdated = true;
     }
 
     //Validating email
@@ -61,12 +63,20 @@ router.put("/updateInfo", async (req, resp) => {
     }
 
     if(username.length > 24){
-        const data = {"message": "Maximum length for username is 24 character", "state": "failed"};
+        const message = {"message": "Maximum length for username is 24 character", "state": "failed"};
         sendResponse(message, resp);
         return
     }
 
-    if(username !== userInfo.username){
+    if(bio.length > 250){
+        const message = {"message": "Maximum length for bio is 250 character", "state": "failed"};
+        sendResponse(message, resp);
+        return
+    }
+
+    //Updating username if the username was not the same as in token
+    if(usernameUpdated == false){
+        //Checking username exist or not
         const isNewUsernameExist = await usersTB.findOne({
             where: {
                 username: username
@@ -85,7 +95,7 @@ router.put("/updateInfo", async (req, resp) => {
                 username: username
             }, {
                 where: {
-                    username: userInfo.username
+                    userid: userInfo.id
                 }
             }).then(() => {usernameUpdated = true;})
         } catch (error) {
@@ -93,10 +103,10 @@ router.put("/updateInfo", async (req, resp) => {
             sendResponse(message, resp);
             return
         }
-
     }
 
-    if(email != userInfo.email){
+    //Updating email if the username was not the same as in token
+    if(emailUpdated == false){
         const isNewEmailExist = await usersTB.findOne({
             where: {
                 email: email
@@ -114,7 +124,7 @@ router.put("/updateInfo", async (req, resp) => {
                 email: email
             }, {
                 where: {
-                    email: userInfo.email
+                    userid: userInfo.id
                 }
             }).then(() => {emailUpdated = true})
         } catch (error) {
@@ -122,30 +132,46 @@ router.put("/updateInfo", async (req, resp) => {
             sendResponse(message, resp);
             return
         }
-
     }
 
-    if(usernameUpdated || emailUpdated){
-        const message = {"state": "success", "message": "Data updated successfully"};
-        var newUserData = {}
-        const userData = await usersTB.findOne({
+    //Updating Bio
+    try {
+        const updateBio = await usersTB.update({
+            bio: bio
+        }, {
             where: {
-                username: username
+                userid: userInfo.id
             }
-        })
-        newUserData.username = userData.username;
-        newUserData.email = userData.email;
-        newUserData.id = userData.userid;
-        newUserData.role = userData.role;
+        });
 
-        const token = jwt.sign(newUserData, process.env.JWT_SECRET,{
+        if(updateBio){
+            bioUpdated = true;
+        }
+    } catch (error) {
+        const message = {"state": "failed", "message": "Couldn't update bio"};
+        sendResponse(message, resp);
+        return
+    }
+
+    if(usernameUpdated && emailUpdated && bioUpdated){
+        const message = {"state": "success", "message": "Data updated successfully"};
+        //Generating new token
+        var newToken = {};
+        
+        newToken.username = username;
+        newToken.email = email;
+        newToken.id = userInfo.id;
+        newToken.role = userInfo.role;
+        newToken.profilePic = userInfo.profilePic;
+
+        const token = jwt.sign(newToken, process.env.JWT_SECRET,{
             expiresIn: "1h"
         });
         resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
         sendResponse(message, resp);
         return
     }
-})
+});
 
 router.post("/upload", upload.single('profilePic'), async (req, resp)=> {
     const userProfilePic = "/api/v1/profilePics/" + req.file.filename;
@@ -329,7 +355,7 @@ router.get("/likes", async (req, resp) => {
                 username: userBLogData.dataValues.username, 
                 profilePic: userBLogData.dataValues.profilePic
             };
-            
+
             blogsInfo.user = blogUserInfo;
             blogsInfo.content = blogData;
             likedBlogsList.push(blogsInfo)

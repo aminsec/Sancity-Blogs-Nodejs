@@ -66,6 +66,10 @@ const usersTB = sequelize.define("users", {
     profilePic: {
         type: DataTypes.STRING,
         defaultValue: "/api/v1/profilePics/ProfileDefault.png"
+    },
+
+    bio: {
+        type: DataTypes.STRING
     }
 }, {
     timestamps: false
