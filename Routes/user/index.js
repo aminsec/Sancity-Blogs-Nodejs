@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
-const { usersTB, blogsTB, dead_sessionsTB, sequelize } = require("../../database");
+const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB } = require("../../database");
 const { sendResponse } = require("../../utils/functions");
 const { checkBlogInfo } = require("../../utils/functions");
 
@@ -415,6 +415,13 @@ router.delete("/deleteAccount", async (req, resp) => {
             }
             const deleteUserAccount = await sequelize.query(`delete from ${tableName} where userid = ${userInfo.id}`, {type: sequelize.QueryTypes.DELETE});
         }
+        //Deleting user notification where user's id matches with acted_userid column
+        notificationsTB.destroy({
+            where: {
+                acted_useird: userInfo.id
+            }
+        })
+
     }
     await deleteAccount();
     //revoking session
