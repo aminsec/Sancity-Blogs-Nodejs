@@ -418,7 +418,7 @@ router.delete("/deleteAccount", async (req, resp) => {
         //Deleting user notification where user's id matches with acted_userid column
         notificationsTB.destroy({
             where: {
-                acted_useird: userInfo.id
+                acted_userid: userInfo.id
             }
         })
 
