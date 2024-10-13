@@ -1,5 +1,7 @@
 const express = require('express');
 const app = express();
+const http = require('http').createServer(app);
+const websocket = require("ws");
 const auth = require("./Routes/auth/index");
 const user = require("./Routes/user/index");
 const UserComments = require("./Routes/user/comments");
@@ -26,8 +28,16 @@ app.use("/blogs", PublicBlogsRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!!');
-  })
+    console.log(req.headers)
+});
 
-app.listen(process.env.APP_PORT, () => {
-    console.log(`Sancity app listening on port 80`);
-  })
+const wss = new websocket.Server({server: http});
+wss.on("connection", (client) => {
+  console.log("One client connected")
+});
+
+http.listen(process.env.APP_PORT, () => {
+  console.log("Sancity app and WS listining on 80")
+});
+
+module.exports = wss;
