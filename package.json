@@ -20,6 +20,7 @@
     "mysql2": "^3.10.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.15",
-    "sequelize": "^6.37.3"
+    "sequelize": "^6.37.3",
+    "ws": "^8.18.0"
   }
 }
