@@ -1,4 +1,5 @@
 const { notificationsTB } = require("../database");
+const jwt = require('jsonwebtoken');
 
 function validateUserInputAsNumber(value) {
     value = value.toString();
@@ -51,6 +52,26 @@ async function createNotification(notif){
         timestamp: Date.now().toString(),
         seen: 0
     })
+};
+
+async function validateWST(token){
+    try {
+        jwt.verify(token, process.env.JWT_SECRET);
+        return true;
+      } catch (error) {
+        return false;
+      }
+}
+
+async function validateWSD(data, client){
+    try {
+        const body = JSON.parse(data); //Parsing message comming from client
+        return [true, body];
+    } catch (error) {
+        client.send("Invalid json");
+        client.close();
+        return [false, null];
+    }
 }
 
 module.exports = {
@@ -58,5 +79,7 @@ module.exports = {
     sendResponse,
     removeItemFromArray,
     checkBlogInfo,
-    createNotification
+    createNotification,
+    validateWST,
+    validateWSD
 }
