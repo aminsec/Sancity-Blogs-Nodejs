@@ -1,4 +1,5 @@
 const { notificationsTB } = require("../database");
+const jwt = require('jsonwebtoken');
 
 function validateUserInputAsNumber(value) {
     value = value.toString();
@@ -51,12 +52,41 @@ async function createNotification(notif){
         timestamp: Date.now().toString(),
         seen: 0
     })
+};
+
+async function validateWST(token){
+    try {
+        const userInfo = jwt.verify(token, process.env.JWT_SECRET);
+        return [true, userInfo];
+    } catch (error) {
+        return [false, null];
+    }
 }
+
+async function validateWSM(message){
+    try {
+        const data = JSON.parse(message); //Parsing message comming from client and returning it if it's valid
+        const [isValidToken, userInfo] = await validateWST(data.token); //Validating user token on each message
+        console.log(isValidToken);
+        if(isValidToken == false){
+            return [false, null];
+        };
+        data.userInfo = userInfo;
+        console.log(data.userInfo)
+        return [true, data];
+      } catch (error) {
+        return [false, null];
+      }
+}
+
+
 
 module.exports = {
     validateUserInputAsNumber,
     sendResponse,
     removeItemFromArray,
     checkBlogInfo,
-    createNotification
+    createNotification,
+    validateWSM,
+    validateWST
 }

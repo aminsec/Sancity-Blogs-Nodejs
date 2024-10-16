@@ -22,9 +22,10 @@ router.get("/info", async(req, resp) => {
         joinDate: getUserData.dataValues.joinDate,
         role: getUserData.dataValues.role,
         profilePic: getUserData.dataValues.profilePic,
-        bio: getUserData.dataValues.bio
+        bio: getUserData.dataValues.bio,
+        token: req.cookies.token
     };
-
+    
     sendResponse(userData, resp);
     return
 })

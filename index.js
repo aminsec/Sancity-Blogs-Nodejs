@@ -1,7 +1,6 @@
 const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const websocket = require("ws");
+const http = require('http');
+const websocket = require('ws');
 const auth = require("./Routes/auth/index");
 const user = require("./Routes/user/index");
 const UserComments = require("./Routes/user/comments");
@@ -13,9 +12,13 @@ const cookieParser = require('cookie-parser');
 const validateJWT = require('./middlewares/jwt');
 const writers = require("./Routes/publicRoutes/writers");
 const notification = require("./Routes/user/notifications");
+const { handelWSC } = require("./ws/index")
+
+const app = express();
+const server = http.createServer(app); 
 
 app.use(cookieParser());
-app.use(bodyparser.json({limit: "50mb"})); //increasing body size limit
+app.use(bodyparser.json({ limit: "50mb" })); // increasing body size limit
 app.use("/", IndexPublicRoutes);
 app.use("/user/", validateJWT);
 app.use("/user", user);
@@ -28,16 +31,14 @@ app.use("/blogs", PublicBlogsRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!!');
-    console.log(req.headers)
 });
 
-const wss = new websocket.Server({server: http});
+const wss = new websocket.Server({ server:server, path: "/chat" }); //Binding WS to HTTP
 wss.on("connection", (client) => {
-  console.log("One client connected")
-});
+    handelWSC(client, wss)
+}); // passing ws connections to its module
 
-http.listen(process.env.APP_PORT, () => {
-  console.log("Sancity app and WS listining on 80")
+const PORT = process.env.APP_PORT || 80; 
+server.listen(PORT, () => {
+    console.log(`Sancity app and WS listening on port ${PORT}`);
 });
-
-module.exports = wss;
