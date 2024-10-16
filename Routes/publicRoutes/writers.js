@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { Op } = require('sequelize');
 const { usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber, checkBlogInfo } = require("../../utils/functions");
 const { sendResponse } = require("../../utils/functions");
@@ -7,15 +8,9 @@ const { sendResponse } = require("../../utils/functions");
 router.get("/:userid", async (req, resp) => {
     const { userid } = req.params;
 
-    if(!validateUserInputAsNumber(userid)){
-        const message = {state: "failed", message: "User not found"};
-        sendResponse(message, resp);
-        return
-    }
-
     const user = await usersTB.findOne({
         where: {
-            userid: userid
+            [Op.or]: [{ userid: userid }, { username: userid }],
         }
     });
 

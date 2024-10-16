@@ -38,16 +38,19 @@ async function handelWSC(client, wss) {
         
         wss.clients.forEach(cl => {
             if(cl.id == message.to){
-                console.log(cl.id + " is " + message.to);
                 if(cl.readyState == 1){
-                    cl.send(message.message)
+                    const messageToSend = {
+                        "type": "message",
+                        "from": clientUsername,
+                        "message": message.message,
+                        "timestamp": Date.now()
+                    };
+
+                    cl.send(JSON.stringify(messageToSend));
+                    return
                 }
-            }else{
-                console.log("nah")
             }
         });
-
-
     };
 
     client.onclose = () => {
