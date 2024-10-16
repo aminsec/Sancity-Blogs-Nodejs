@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
     res.send('Hello World!!');
 });
 
-const wss = new websocket.Server({ server }); //Binding WS to HTTP
+const wss = new websocket.Server({ server:server, path: "/chat" }); //Binding WS to HTTP
 wss.on("connection", (client) => {
     handelWSC(client, wss)
 }); // passing ws connections to its module

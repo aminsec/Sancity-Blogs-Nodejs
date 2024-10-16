@@ -56,23 +56,30 @@ async function createNotification(notif){
 
 async function validateWST(token){
     try {
-        jwt.verify(token, process.env.JWT_SECRET);
-        return true;
-      } catch (error) {
-        return false;
-      }
-}
-
-async function validateWSD(data, client){
-    try {
-        const body = JSON.parse(data); //Parsing message comming from client
-        return [true, body];
+        const userInfo = jwt.verify(token, process.env.JWT_SECRET);
+        return [true, userInfo];
     } catch (error) {
-        client.send("Invalid json");
-        client.close();
         return [false, null];
     }
 }
+
+async function validateWSM(message){
+    try {
+        const data = JSON.parse(message); //Parsing message comming from client and returning it if it's valid
+        const [isValidToken, userInfo] = await validateWST(data.token); //Validating user token on each message
+        console.log(isValidToken);
+        if(isValidToken == false){
+            return [false, null];
+        };
+        data.userInfo = userInfo;
+        console.log(data.userInfo)
+        return [true, data];
+      } catch (error) {
+        return [false, null];
+      }
+}
+
+
 
 module.exports = {
     validateUserInputAsNumber,
@@ -80,6 +87,6 @@ module.exports = {
     removeItemFromArray,
     checkBlogInfo,
     createNotification,
-    validateWST,
-    validateWSD
+    validateWSM,
+    validateWST
 }
