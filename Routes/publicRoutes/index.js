@@ -23,7 +23,7 @@ router.get("/search", async (req, resp) => {
         where: {
             is_public: 1
         }
-    })
+    });
 
     //Getting blogs' tags
     for(var i = 0; i < allBlogs.length; i++){
@@ -40,19 +40,19 @@ router.get("/search", async (req, resp) => {
                 }
             }
         }
-    }
-
+    };
 
     //removing unrelated blogs that has 0 score
     for(vals in blogsScore){
         if(blogsScore[vals] == 0){
             delete blogsScore[vals]
         }
-    }
+    };
+
     //sorting
     function getKeyByValue(object, value) {
         return Object.keys(object).find(key => object[key] === value);
-      }
+    };
 
     var values = Object.values(blogsScore); //getting the scores of blogs to sort 
     var sortedValues = values.sort((a, b) => {return b - a}); //sorting the scores descending
@@ -60,7 +60,7 @@ router.get("/search", async (req, resp) => {
        var keys = getKeyByValue(blogsScore, sortedValues[i]);
        sortedBlogsScore.set(keys, sortedValues[i]);
        delete blogsScore[keys]; //removing the object, to prevent duplicate
-    }
+    };
     
 
     //getting related blogs id from the sorted list
@@ -73,20 +73,20 @@ router.get("/search", async (req, resp) => {
                 break
             }
         }
-    }
+    };
 
     //Implementing some security issues 
     for(var i = 0; i < sortedRelatedBlogs.length; i++){
         if(sortedRelatedBlogs[i].showLikes == 0){
             sortedRelatedBlogs[i].likes = "private"
         }
-    }
+    };
 
 
     for(index in sortedRelatedBlogs){
         const validatedBlog = checkBlogInfo(sortedRelatedBlogs[index], keysToExtractFromBlog);
         validatedSortedRelatedBlogs.push(validatedBlog);
-    }
+    };
 
     //Getting each blog user info
     for(index in validatedSortedRelatedBlogs){
@@ -97,10 +97,7 @@ router.get("/search", async (req, resp) => {
             }
         })
         validatedSortedRelatedBlogs[index].user = {userid: userInfo.dataValues.userid,username: userInfo.dataValues.username, profilePic: "/statics/img/ProfileDefault.png"}
-    }
-
-
-
+    };
 
     sendResponse({state: "success", length: validatedSortedRelatedBlogs.length, blogs: validatedSortedRelatedBlogs}, resp);
 });

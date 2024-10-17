@@ -7,28 +7,33 @@ const { sendResponse } = require("../../utils/functions");
 
 router.get("/:userid", async (req, resp) => {
     const { userid } = req.params;
-
-    const user = await usersTB.findOne({
+    var response = []
+    const user = await usersTB.findAll({
         where: {
-            [Op.or]: [{ userid: userid }, { username: userid }],
+            [Op.or]: [
+                // { userid: userid }, { username: userid }
+                {
+                    userid: userid
+                },
+                {
+                    username: {[Op.like]: `%${userid}%`}
+                }
+            ],
         }
     });
 
     if(user){
-        const userData = user.dataValues;
-        var data = {
-            userid: userData.userid,
-            username: userData.username,
-            bio: userData.bio,
-            profilePic: userData.profilePic,
-            joinDate: userData.joinDate
-        }; 
-        
-        const message = {state: "success", user: data};
-        sendResponse(message, resp);
-        return
-    }else{
-        const message = {state: "failed", message: "User not found"};
+        for(vals of user){
+            var data = {}
+            data.userid = vals.userid;
+            data.username = vals.username;
+            data.bio = vals.bio;
+            data.profilePic = vals.profilePic;
+            data.joinDate = vals.joinDate;
+            response.push(data);
+        };
+
+        const message = {state: "success", users: response};
         sendResponse(message, resp);
         return
     }
