@@ -1,39 +1,39 @@
 const express = require('express');
 const router = express.Router();
+const { Op } = require('sequelize');
 const { usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber, checkBlogInfo } = require("../../utils/functions");
 const { sendResponse } = require("../../utils/functions");
 
 router.get("/:userid", async (req, resp) => {
+    //Returning alike users to input username
     const { userid } = req.params;
-
-    if(!validateUserInputAsNumber(userid)){
-        const message = {state: "failed", message: "User not found"};
-        sendResponse(message, resp);
-        return
-    }
-
-    const user = await usersTB.findOne({
+    var response = []
+    const user = await usersTB.findAll({
         where: {
-            userid: userid
+            [Op.or]: [
+                {
+                    userid: userid
+                },
+                {
+                    username: {[Op.like]: `%${userid}%`}
+                }
+            ],
         }
     });
 
     if(user){
-        const userData = user.dataValues;
-        var data = {
-            userid: userData.userid,
-            username: userData.username,
-            bio: userData.bio,
-            profilePic: userData.profilePic,
-            joinDate: userData.joinDate
-        }; 
-        
-        const message = {state: "success", user: data};
-        sendResponse(message, resp);
-        return
-    }else{
-        const message = {state: "failed", message: "User not found"};
+        for(vals of user){
+            var data = {}
+            data.userid = vals.userid;
+            data.username = vals.username;
+            data.bio = vals.bio;
+            data.profilePic = vals.profilePic;
+            data.joinDate = vals.joinDate;
+            response.push(data);
+        };
+
+        const message = {state: "success", users: response};
         sendResponse(message, resp);
         return
     }

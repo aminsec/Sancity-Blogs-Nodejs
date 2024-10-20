@@ -99,29 +99,34 @@ router.post("/signup", async (req, resp) => {
     const { username, password, email } = req.body;
     if(username === undefined || password === undefined || email == undefined){
         const data = {"message": "All fields required", "success": false};
-        resp.status(400);
         resp.setHeader("content-type", "application/json");
         resp.send(JSON.stringify(data));
         resp.end();
         return
     }
 
+    if(username.length < 3) {
+        const data = {"message": "Username is too short", "success": false};
+        sendResponse(data, resp);
+        return
+    }
+
     if(username.length > 24){
         const data = {"message": "Maximum length for username is 24 character", "success": false};
-        resp.status(400);
         resp.setHeader("content-type", "application/json");
         resp.send(JSON.stringify(data));
         resp.end();
         return
     }
     
+
+
     const checkUsernameRG =  new RegExp('^[a-zA-Z0-9_]+$');
     const isValidUsername = username.match(checkUsernameRG);
     const validEmail = validator.validate(email);
     
     if(!validEmail || !isValidUsername){
         const data = {"message": "Invalid inputs. Check email and username are valid", "success": false};
-        resp.status(400);
         resp.setHeader("content-type", "application/json");
         resp.send(JSON.stringify(data));
         resp.end();
@@ -136,7 +141,6 @@ router.post("/signup", async (req, resp) => {
     })
     if(checkUsernameExist){
         const data = {"message": "This username already exist", "success": false};
-        resp.status(400);
         resp.setHeader("content-type", "application/json");
         resp.send(JSON.stringify(data))
         resp.end();
@@ -151,7 +155,6 @@ router.post("/signup", async (req, resp) => {
     })
     if(checkEamilExist){
         const data = {"message": "This email already exist", "success": false};
-        resp.status(400);
         resp.setHeader("content-type", "application/json");
         resp.send(JSON.stringify(data))
         resp.end();
@@ -188,8 +191,10 @@ router.post("/signup", async (req, resp) => {
             }
             //Creating token
             const token = jwt.sign(userData, process.env.JWT_SECRET);
+            const message = {success: true}
             resp.setHeader("content-type", "application/json");
             resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
+            resp.send(JSON.stringify(message));
             resp.end();
             return;
         }
@@ -233,8 +238,6 @@ router.post("/forgot-password", (req, resp) => {
         }
     });
 
-
-
     var mailOptions = {
         from: 'sancityblogs@gmail.com',
         to: email,
@@ -249,8 +252,7 @@ router.post("/forgot-password", (req, resp) => {
         console.log('Email sent: ' + info.response);
     }
     });
-
-})
+});
 
 router.get("/logout", async (req, resp) => {
     if(req.cookies.token){
@@ -276,7 +278,6 @@ router.get("/logout", async (req, resp) => {
     resp.cookie("token", "deleted");
     resp.redirect("/");
     resp.end();
-
 });
 
 module.exports = router;
