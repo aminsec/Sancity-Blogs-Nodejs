@@ -6,12 +6,12 @@ const { validateUserInputAsNumber, checkBlogInfo } = require("../../utils/functi
 const { sendResponse } = require("../../utils/functions");
 
 router.get("/:userid", async (req, resp) => {
+    //Returning alike users to input username
     const { userid } = req.params;
     var response = []
     const user = await usersTB.findAll({
         where: {
             [Op.or]: [
-                // { userid: userid }, { username: userid }
                 {
                     userid: userid
                 },
