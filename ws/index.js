@@ -1,4 +1,5 @@
 const { validateWSM, validateWST } = require("../utils/functions");
+const { messagesTB, usersTB } = require("../database");
 const { v4: uuidv4 } = require("uuid");
 const WebSocket = require('ws');
 
@@ -18,7 +19,7 @@ async function handelWSC(client, wss) {
         return
     };
 
-    // Set up a ping-pong mechanism
+    // Setting up a ping-pong mechanism
     const interval = setInterval(() => {
     if (client.readyState === 1) {
         client.ping(); // Send a ping to the client
@@ -51,6 +52,14 @@ async function handelWSC(client, wss) {
                 }
             }
         });
+
+        //Inserting message to database
+        messagesTB.create({
+            sender: userInfo.username,
+            receiver: message.to,
+            message: message.message,
+            timestamp: Date.now().toString()
+        })
     };
 
     client.onclose = () => {

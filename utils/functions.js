@@ -66,13 +66,14 @@ async function validateWST(token){
 async function validateWSM(message){
     try {
         const data = JSON.parse(message); //Parsing message comming from client and returning it if it's valid
+        if(data.message.length > 1000000){
+            return [false, null]; //Returning false if message lenght is big
+        }
         const [isValidToken, userInfo] = await validateWST(data.token); //Validating user token on each message
-        console.log(isValidToken);
         if(isValidToken == false){
             return [false, null];
         };
         data.userInfo = userInfo;
-        console.log(data.userInfo)
         return [true, data];
       } catch (error) {
         return [false, null];
