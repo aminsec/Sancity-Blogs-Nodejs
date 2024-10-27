@@ -11,6 +11,7 @@ const bodyparser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const validateJWT = require('./middlewares/jwt');
 const writers = require("./Routes/publicRoutes/writers");
+const messages = require("./Routes/user/messages");
 const notification = require("./Routes/user/notifications");
 const { handelWSC } = require("./ws/index")
 
@@ -25,6 +26,7 @@ app.use("/user", user);
 app.use("/writers/", writers);
 app.use("/user/comments/", UserComments);
 app.use("/user/blogs/", UserBlogs);
+app.use("/user/messages/", messages);
 app.use("/user/notifications/", notification);
 app.use("/auth", auth);
 app.use("/blogs", PublicBlogsRoutes);

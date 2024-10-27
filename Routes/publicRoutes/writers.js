@@ -39,13 +39,41 @@ router.get("/:userid", async (req, resp) => {
     }
 });
 
+
+router.get("/:username/info", async(req, resp) => {
+    const { username } = req.params; 
+    const userInfo = await usersTB.findOne({
+        where: {
+            username: username
+        }
+    });
+
+    if(userInfo){
+        const userData = userInfo.dataValues;
+        var data = {}
+        data.userid = userInfo.userid;
+        data.username = userInfo.username;
+        data.bio = userInfo.bio;
+        data.profilePic = userInfo.profilePic;
+        data.joinDate = userInfo.joinDate;
+
+        const message = {state: "success", user: data};
+        sendResponse(message, resp);
+        return
+    }else{
+        const message = {state: "failed", message: "User not found"};
+        sendResponse(message, resp);
+        return
+    }
+});
+
 router.get("/:userid/blogs", async (req, resp) => {
     const { userid } = req.params; 
     if(!validateUserInputAsNumber(userid)){
         const message = {state: "failed", message: "User not found"};
         sendResponse(message, resp);
         return
-    }
+    };
 
     const getBlogs = await blogsTB.findAll({
         where: {

@@ -1,4 +1,4 @@
-const {Sequelize, DataTypes} = require("sequelize");
+const {Sequelize, DataTypes, TEXT} = require("sequelize");
 const sequelize = new Sequelize(
     'sancity',
     'root',
@@ -239,6 +239,36 @@ const dead_sessionsTB = sequelize.define("dead_sessions", {
     }
 }, {
     timestamps: false
+});
+
+const messagesTB = sequelize.define("messages", {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+        allowNull: false
+    },
+
+    sender: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+
+    receiver: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+
+    message: {
+        type: TEXT('medium')
+    },
+
+    timestamp: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+}, {
+    timestamps: false
 })
 
 sequelize.sync();
@@ -246,6 +276,7 @@ sequelize.sync();
 exports.usersTB = usersTB;
 exports.commentsTB = commentsTB;
 exports.blogsTB = blogsTB;
+exports.messagesTB = messagesTB;
 exports.notificationsTB = notificationsTB;
 exports.dead_sessionsTB = dead_sessionsTB;
 exports.sequelize = sequelize;
