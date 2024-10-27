@@ -28,7 +28,7 @@ router.get("/:contact", async (req, resp) => {
     limit = Number(limit);
     offset = Number(offset);
 
-    const sendedMessages = await messagesTB.findAll({
+    const sentMessages = await messagesTB.findAll({
         where: {
             sender: userInfo.username,
             receiver: contact
@@ -48,10 +48,10 @@ router.get("/:contact", async (req, resp) => {
         offset: offset
     });
 
-    if(sendedMessages && receivedMessages){
+    if(sentMessages && receivedMessages){
         const message = {
-            sends: sendedMessages,
-            receivds: receivedMessages
+            sents: sentMessages,
+            receiveds: receivedMessages
         };
 
         sendResponse(message, resp)
