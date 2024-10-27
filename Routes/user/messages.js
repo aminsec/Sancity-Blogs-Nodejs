@@ -11,7 +11,7 @@ router.get("/:contact", async (req, resp) => {
     var { offset } = req.query;
 
     //Validating limit and offset value
-    if(!limit || !offset){
+    if((!limit || !offset) || (limit > 1000 || offset > 1000)){
         const message = {state: "failed", message: "Invalid limit or offset value"};
         sendResponse(message, resp);
         return
@@ -50,11 +50,18 @@ router.get("/:contact", async (req, resp) => {
 
     if(sentMessages && receivedMessages){
         const message = {
-            sents: sentMessages,
-            receiveds: receivedMessages
+            state: "success",
+            messages: {
+                sents: sentMessages,
+                receiveds: receivedMessages
+            }
+
         };
 
-        sendResponse(message, resp)
+        sendResponse(message, resp);
+    }else{
+        const message = {state: "failed", message: "User not found"};
+        sendResponse(message, resp);
     }
 
 
