@@ -134,7 +134,7 @@ router.post("/signup", async (req, resp) => {
 router.get("/logout", async (req, resp) => {
     if(req.cookies.token){
         try {
-            //validation the cookie value to insert only valid jwt token to dead_sessions 
+            //validating the cookie's value to insert only valid jwt token to dead_sessions table
             jwt.verify(req.cookies.token, process.env.JWT_SECRET);
             const revokeToken = await dead_sessionsTB.create({
                 session: req.cookies.token
@@ -157,43 +157,39 @@ router.get("/logout", async (req, resp) => {
     resp.end();
 });
 
+//A secondary route to check user authentication
 router.get("/check-auth", async (req, resp) => {
     if(!req.cookies.token){
-        const data = {"message": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        const message = {"message": false};
+        sendResponse(message, resp);
         return
     }
 
     const token = req.cookies.token;
-    try {
-        const isValidToken = jwt.verify(token, process.env.JWT_SECRET);
-        if(isValidToken){
-            //check if the token is a revoked token
-            const isRevokedToken = await dead_sessionsTB.findOne({
-                where: {
-                    session: token
-                }
-            });
-            if(isRevokedToken){
-                const data = {"message": false};
-                resp.setHeader("content-type", "application/json");
-                resp.send(JSON.stringify(data));
-                resp.end();
-                return
-            }
 
-            const data = {"message": true};
-            resp.setHeader("content-type", "application/json");
-            resp.send(JSON.stringify(data));
-            resp.end();
+    try {
+        //If token was not valid, it will go through an error
+        const isValidToken = jwt.verify(token, process.env.JWT_SECRET);
+        
+        //checking if the token is a revoked token
+        const isRevokedToken = await dead_sessionsTB.findOne({
+            where: {
+                session: token
+            }
+        });
+        if(isRevokedToken){
+            const message = {"message": false};
+            sendResponse(message, resp);
             return
         }
+
+        const message = {"message": true};
+        sendResponse(message, resp);
+        return
+        
     } catch (error) {
-        const data = {"message": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
+        const message = {"message": false};
+        sendResponse(message, resp);
         resp.end();
     }
 });
