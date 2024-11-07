@@ -7,47 +7,6 @@ const { sendResponse } = require("../../utils/functions");
 var validator = require("email-validator");
 var nodemailer = require('nodemailer');
 
-router.get("/check-auth", async (req, resp) => {
-    if(!req.cookies.token){
-        const data = {"message": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
-        return
-    }
-
-    const token = req.cookies.token;
-    try {
-        const isValidToken = jwt.verify(token, process.env.JWT_SECRET);
-        if(isValidToken){
-            //check if the token is a revoked token
-            const isRevokedToken = await dead_sessionsTB.findOne({
-                where: {
-                    session: token
-                }
-            });
-            if(isRevokedToken){
-                const data = {"message": false};
-                resp.setHeader("content-type", "application/json");
-                resp.send(JSON.stringify(data));
-                resp.end();
-                return
-            }
-
-            const data = {"message": true};
-            resp.setHeader("content-type", "application/json");
-            resp.send(JSON.stringify(data));
-            resp.end();
-            return
-        }
-    } catch (error) {
-        const data = {"message": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
-    }
-})
-
 router.post("/login", (req, resp) => {
     const { username, password } = req.body;
     if(username === undefined || password === undefined){
@@ -278,6 +237,47 @@ router.get("/logout", async (req, resp) => {
     resp.cookie("token", "deleted");
     resp.redirect("/");
     resp.end();
+});
+
+router.get("/check-auth", async (req, resp) => {
+    if(!req.cookies.token){
+        const data = {"message": false};
+        resp.setHeader("content-type", "application/json");
+        resp.send(JSON.stringify(data));
+        resp.end();
+        return
+    }
+
+    const token = req.cookies.token;
+    try {
+        const isValidToken = jwt.verify(token, process.env.JWT_SECRET);
+        if(isValidToken){
+            //check if the token is a revoked token
+            const isRevokedToken = await dead_sessionsTB.findOne({
+                where: {
+                    session: token
+                }
+            });
+            if(isRevokedToken){
+                const data = {"message": false};
+                resp.setHeader("content-type", "application/json");
+                resp.send(JSON.stringify(data));
+                resp.end();
+                return
+            }
+
+            const data = {"message": true};
+            resp.setHeader("content-type", "application/json");
+            resp.send(JSON.stringify(data));
+            resp.end();
+            return
+        }
+    } catch (error) {
+        const data = {"message": false};
+        resp.setHeader("content-type", "application/json");
+        resp.send(JSON.stringify(data));
+        resp.end();
+    }
 });
 
 module.exports = router;

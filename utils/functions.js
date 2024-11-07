@@ -12,9 +12,11 @@ function validateUserInputAsNumber(value) {
 };
 
 //Function to send normall messages
-function sendResponse(data, resp){
-    resp.setHeader("Content-Type", "application/json");
-    resp.send(JSON.stringify(data));
+function sendResponse(data, resp, headers = {}, code = 200){
+    headers["Content-Type"] = "application/json"; //Setting content-type to json
+    resp.statusCode = code; //Setting status code
+    resp.header(headers);
+    resp.send(JSON.stringify(data)); 
     resp.end();
 };
 
