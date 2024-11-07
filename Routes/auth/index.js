@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto')
 const { usersTB, dead_sessionsTB } = require("../../database");
 const jwt = require('jsonwebtoken');
-const { sendResponse } = require("../../utils/functions");
+const { sendResponse, isUndefined, validateUsername } = require("../../utils/functions");
 var validator = require("email-validator");
 var nodemailer = require('nodemailer');
 
@@ -11,12 +11,9 @@ router.post("/login", async (req, resp) => {
     //Getting username and password from body
     const { username, password } = req.body; 
     
-    //Returning bad request If parameters not defined
-    if(username === undefined || password === undefined){
-        const message = {message: "All fields required", state: "failed"};
-        sendResponse(message, resp, {}, 400);
-        return
-    }
+    //Returning, If parameters not defined
+    if(await isUndefined(resp, username, password)) return;
+
     //hashing the password to md5
     let userHashPassword = crypto.createHash('md5').update(password).digest("hex"); 
     
@@ -57,76 +54,55 @@ router.post("/login", async (req, resp) => {
 });
 
 router.post("/signup", async (req, resp) => {
+     //Getting username and password from body
     const { username, password, email } = req.body;
-    if(username === undefined || password === undefined || email == undefined){
-        const data = {"message": "All fields required", "success": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
-        return
-    }
 
-    if(username.length < 3) {
-        const data = {"message": "Username is too short", "success": false};
-        sendResponse(data, resp);
-        return
-    }
+    //Checking if parameters are undefined
+    if(await isUndefined(resp, username, password, email)) return;
 
-    if(username.length > 24){
-        const data = {"message": "Maximum length for username is 24 character", "success": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
-        return
-    }
-    
+    //Validating username
+    if(!await validateUsername(username, resp)) return;
 
-
-    const checkUsernameRG =  new RegExp('^[a-zA-Z0-9_]+$');
-    const isValidUsername = username.match(checkUsernameRG);
-    const validEmail = validator.validate(email);
-    
-    if(!validEmail || !isValidUsername){
-        const data = {"message": "Invalid inputs. Check email and username are valid", "success": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+    //Validating email
+    if(!validator.validate(email)){
+        const message = {message: "Invalid email", state: "failed"};
+        sendResponse(message, resp, {}, 400);
         return
     }
 
     //Checking if the username exist
-    const checkUsernameExist = await usersTB.findOne({
+    const usernameExist = await usersTB.findOne({
         where: {
             username: username
         }
-    })
-    if(checkUsernameExist){
-        const data = {"message": "This username already exist", "success": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data))
-        resp.end();
+    });
+
+    if(usernameExist){
+        const message = {message: "This username already exist", state: "failed"};
+        sendResponse(message, resp, {}, 400);
         return
     }
 
     //Checking if the email exist
-    const checkEamilExist = await usersTB.findOne({
+    const emailExist = await usersTB.findOne({
         where: {
             email: email
         }
     })
-    if(checkEamilExist){
-        const data = {"message": "This email already exist", "success": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data))
-        resp.end();
+    if(emailExist){
+        const message = {message: "This email already exist", state: "failed"};
+        sendResponse(message, resp, {}, 400);
         return
     }
 
     //Inserting user
     var createdTime = Date.now().toString();
-    let userHashPassword = crypto.createHash('md5').update(password).digest("hex"); //hashing the password to md5
+    
+    //hashing the password to md5
+    let userHashPassword = crypto.createHash('md5').update(password).digest("hex"); 
     
     try {
+        //Inserting user's data
         const insertUser = await usersTB.create({
             username: username,
             password: userHashPassword,
@@ -134,85 +110,25 @@ router.post("/signup", async (req, resp) => {
             role: "user",
             joinDate: createdTime
         })
-        
         if(insertUser){
-            //Getting userid data from database to be set in token
-            const createdUserData = await usersTB.findOne({
-                where:{
-                    username: username
-                }
-            })
-
             const userData = {
                 username: username,
                 email:  email,
-                id: createdUserData.userid,
+                id: insertUser.userid,
                 profilePic: "/api/v1/profilePics/ProfileDefault.png",
                 role: "user"
             }
             //Creating token
             const token = jwt.sign(userData, process.env.JWT_SECRET);
-            const message = {success: true}
-            resp.setHeader("content-type", "application/json");
             resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
-            resp.send(JSON.stringify(message));
             resp.end();
             return;
         }
     } catch (error) {
-        const data = {"message": "An error accoured", "success": false};
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        const message = {"message": "An error accoured", "success": false};
+        sendResponse(message, resp, {}, 500);
         return
     }
-})
-
-router.post("/forgot-password", (req, resp) => {
-    const { email } = req.body;
-    if(!email){
-        sendResponse({state: "failed", message: "Required email parameter"}, resp)
-        return
-    }
-    
-    const isValidEmail = validator.validate(email);
-    if(!isValidEmail){
-        sendResponse({state: "failed", message: "Invalid email address"}, resp)
-        return
-    }
-
-    const data = {
-        email: email
-    }
-    //Creating token to change password
-    const token = jwt.sign(data, process.env.JWT_SECRET,{
-        expiresIn: "5m"
-    });
-
-    var transporter = nodemailer.createTransport({
-        host: 'smtp.mailgun.org',
-        port: 587,
-        secure: false, 
-        auth: {
-          user: 'postmaster@sandbox94213fe03b824870b50c50d58f27973e.mailgun.org',
-          pass: 'd782ab7804e5066149b396ea77369746-2b755df8-19d1528a'
-        }
-    });
-
-    var mailOptions = {
-        from: 'sancityblogs@gmail.com',
-        to: email,
-        subject: 'Change Password!',
-        html: `You can change your password using this <a href=http://sancity.blogs:8081/change-password?token=${token}>link</a>`
-    };
-
-    transporter.sendMail(mailOptions, function(error, info){
-    if (error) {
-        console.log(error);
-    } else {
-        console.log('Email sent: ' + info.response);
-    }
-    });
 });
 
 router.get("/logout", async (req, resp) => {

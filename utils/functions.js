@@ -82,7 +82,39 @@ async function validateWSM(message){
       }
 }
 
+async function isUndefined(resp, ...params){
+    if(params.includes(undefined)){
+        const message = {message: "All fields required", state: "failed"};
+        sendResponse(message, resp, {}, 400);
+        return true
+    }
+    
+    return false
+}
 
+async function validateUsername(username, resp){
+    if(username.length < 3) {
+        const message = {message: "Username is too short", state: "failed"};
+        sendResponse(message, resp, {}, 400);
+        return false
+    }
+
+    if(username.length > 24){
+        const message = {message: "Maximum length for username is 24 character", state: "failed"};
+        sendResponse(message, resp, {}, 400);
+        return false
+    }
+
+    const checkUsernameRG =  new RegExp('^[a-zA-Z0-9_]+$');
+    const isValidUsername = username.match(checkUsernameRG);
+    if(!isValidUsername){
+        const message = {message: "Username can only contain a-z and 0-9", state: "failed"};
+        sendResponse(message, resp, {}, 400);
+        return false
+    }
+
+    return true
+}
 
 module.exports = {
     validateUserInputAsNumber,
@@ -91,5 +123,7 @@ module.exports = {
     checkBlogInfo,
     createNotification,
     validateWSM,
-    validateWST
+    validateWST,
+    isUndefined,
+    validateUsername
 }
