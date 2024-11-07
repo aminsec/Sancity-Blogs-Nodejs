@@ -5,7 +5,6 @@ const { usersTB, dead_sessionsTB } = require("../../database");
 const jwt = require('jsonwebtoken');
 const { sendResponse, isUndefined, validateUsername } = require("../../utils/functions");
 var validator = require("email-validator");
-var nodemailer = require('nodemailer');
 
 router.post("/login", async (req, resp) => {
     //Getting username and password from body

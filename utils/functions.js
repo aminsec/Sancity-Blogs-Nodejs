@@ -28,19 +28,24 @@ function removeItemFromArray(array, item){
     return array
 };
 
-function checkBlogInfo(blogData, keys){
-    var validBlog = {};
-    for(index in keys){
-        for(blogDagtaKeys in blogData){
-            if(keys[index] == blogDagtaKeys){
-                validBlog[blogDagtaKeys] = blogData[blogDagtaKeys];
-            }
+async function validateBlogInfo(blog, extraKeysToBeFilter = []){
+    //Defining sensitive keys 
+    var keysToBeFilter = ["blog_magicToken", "magicToken_exp"];
+    
+    //Concatinating keys to be filter
+    keysToBeFilter.concat(extraKeysToBeFilter); 
+    
+    //Removing sensitive keys
+    keysToBeFilter.map(key => {
+        if(blog[key]){
+            delete blog[key];
         }
-    };
-    if(validBlog.showLikes == 0){
-        validBlog.likes = "private"
+    });
+
+    if(blog.showLikes == 0){
+        blog.likes = "private"
     } 
-    return validBlog;
+    return blog;
 };
 
 async function createNotification(notif){
@@ -120,7 +125,7 @@ module.exports = {
     validateUserInputAsNumber,
     sendResponse,
     removeItemFromArray,
-    checkBlogInfo,
+    validateBlogInfo,
     createNotification,
     validateWSM,
     validateWST,

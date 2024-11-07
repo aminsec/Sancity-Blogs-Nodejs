@@ -4,38 +4,40 @@ const jwt = require('jsonwebtoken');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber } = require("../../utils/functions");
 const { sendResponse } = require("../../utils/functions");
-const { checkBlogInfo } = require("../../utils/functions");
+const { validateBlogInfo } = require("../../utils/functions");
 
 router.get("/", async (req, resp) => {
-    //Getting all blogs from database
     const blogLists = [];
+
+    //Getting all blogs from database
     const allBlogs = await blogsTB.findAll({
         where: {
             is_public: 1
         }
-    }) 
+    });
+   
+    for (blog of allBlogs){
+        //Removing sensitve keys from blog
+        const validatedBlog = await validateBlogInfo(blog.dataValues);
 
-    //Getting userid from each blog, and tieing related user info to each blog object
-    await Promise.all(allBlogs.map(async (blog) => {
-        var blog = blog.dataValues;
-        var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"]
-        var validatedBlog = checkBlogInfo(blog, keysToExtractFromBlog);
-        const getUserInfo = await usersTB.findOne({
+        //Getting user's info of each blog
+        const blogsUserInfo = await usersTB.findOne({
             where: {
                 userid: validatedBlog.userid
             }
         });
-        userInfo = {
-            username: getUserInfo.username,
-            userid: getUserInfo.userid,
-            profilePic: getUserInfo.profilePic
-        };
-        validatedBlog.user = userInfo;
-
-        blogLists.push(validatedBlog);
-    }));
-
-    sendResponse({"state": "success", "blogs": {"len": blogLists.length, "content": blogLists}}, resp);
+        if(blogsUserInfo){
+            var userInfo = {
+                username: blogsUserInfo.username,
+                userid: blogsUserInfo.userid,
+                profilePic: blogsUserInfo.profilePic
+            };
+            validatedBlog.user = userInfo;
+            blogLists.push(validatedBlog);
+        }
+    }
+    const message = {state: "success", "blogs": {"len": blogLists.length, "content": blogLists}};
+    sendResponse(message, resp);
 });
 
 router.post("/magicLink", async (req, resp) => {
