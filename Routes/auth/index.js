@@ -7,52 +7,54 @@ const { sendResponse } = require("../../utils/functions");
 var validator = require("email-validator");
 var nodemailer = require('nodemailer');
 
-router.post("/login", (req, resp) => {
-    const { username, password } = req.body;
+router.post("/login", async (req, resp) => {
+    //Getting username and password from body
+    const { username, password } = req.body; 
+    
+    //Returning bad request If parameters not defined
     if(username === undefined || password === undefined){
-        const data = {"message": "All fields required", "success": false};
-        resp.status(400);
-        resp.setHeader("content-type", "application/json");
-        resp.send(JSON.stringify(data));
-        resp.end();
+        const message = {message: "All fields required", state: "failed"};
+        sendResponse(message, resp, {}, 400);
         return
     }
-
-    let userHashPassword = crypto.createHash('md5').update(password).digest("hex"); //hashing the password to md5
-    usersTB.findOne({
+    //hashing the password to md5
+    let userHashPassword = crypto.createHash('md5').update(password).digest("hex"); 
+    
+    //Quering user's data
+    const userData = await usersTB.findOne({
         where: {
             username: username,
             password: userHashPassword
         }
-    }).then((res) => {
-        if(res == null){
-            const data = {"message": "Invalid credentials", "success": false};
-            resp.status(401)
-            resp.setHeader("content-type", "application/json");
-            resp.send(JSON.stringify(data));
-            resp.end();
-        }
+    });
 
-        if(res){
-            const userData = {
-                username: username,
-                email: res.email,
-                id: res.userid,
-                role: res.role,
-                profilePic: res.profilePic
-            }
-
-            const token = jwt.sign(userData, process.env.JWT_SECRET,{
-                expiresIn: "1h"
-            });
-            resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
-            resp.end();
-            
-        }
-    })
-
-})
-
+    //Responding with 401 if credentials were not valid
+    if(userData == null){
+        const message = {message: "Invalid credentials", state: "failed"};
+        sendResponse(message, resp, {}, 401);
+        return
+    }
+    
+    //Getting user's data if it was valid
+    if(userData){
+        const userInfo = {
+            username: userData.username,
+            email: userData.email,
+            id: userData.userid,
+            role: userData.role,
+            profilePic: userData.profilePic
+        };
+        
+        //Signing token
+        const token = jwt.sign(userInfo, process.env.JWT_SECRET,{
+            expiresIn: "1h"
+        });
+        
+        //Responding with token
+        resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
+        resp.end();
+    }
+});
 
 router.post("/signup", async (req, resp) => {
     const { username, password, email } = req.body;
