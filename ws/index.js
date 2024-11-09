@@ -1,5 +1,5 @@
-const { validateWSM, validateWST } = require("../utils/functions");
-const { messagesTB, usersTB } = require("../database");
+const { validateWSM, validateWST } = require("../utils/validate");
+const { messagesTB } = require("../database");
 const { v4: uuidv4 } = require("uuid");
 const WebSocket = require('ws');
 

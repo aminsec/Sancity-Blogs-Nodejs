@@ -5,8 +5,8 @@ const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB } = require("../../database");
-const { sendResponse } = require("../../utils/functions");
-const { checkBlogInfo } = require("../../utils/functions");
+const { sendResponse } = require("../../utils/opt");
+const { validateBlogInfo } = require("../../utils/validate");
 
 router.get("/info", async(req, resp) => {
     const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);

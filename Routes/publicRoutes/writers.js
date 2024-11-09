@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const { usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber, checkBlogInfo } = require("../../utils/functions");
-const { sendResponse } = require("../../utils/functions");
+const { validateUserInputAsNumber, validateBlogInfo } = require("../../utils/validate");
+const { sendResponse } = require("../../utils/opt");
 
 router.get("/:userid", async (req, resp) => {
     //Returning alike users to input username

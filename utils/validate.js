@@ -1,5 +1,5 @@
-const { notificationsTB } = require("../database");
 const jwt = require('jsonwebtoken');
+const { sendResponse } = require("./opt");
 
 function validateUserInputAsNumber(value) {
     value = value.toString();
@@ -11,23 +11,7 @@ function validateUserInputAsNumber(value) {
     return false
 };
 
-//Function to send normall messages
-function sendResponse(data, resp, headers = {}, code = 200){
-    headers["Content-Type"] = "application/json"; //Setting content-type to json
-    resp.statusCode = code; //Setting status code
-    resp.header(headers);
-    resp.send(JSON.stringify(data)); 
-    resp.end();
-};
-
-function removeItemFromArray(array, item){
-    const indexOfItem = array.indexOf(item);
-    if (indexOfItem > -1){
-        array.splice(indexOfItem, 1);
-    }
-    return array
-};
-
+//A function to removing sensitive fields from blog info
 async function validateBlogInfo(blog, extraKeysToBeFilter = []){
     //Defining sensitive keys 
     var keysToBeFilter = ["blog_magicToken", "magicToken_exp"];
@@ -48,6 +32,7 @@ async function validateBlogInfo(blog, extraKeysToBeFilter = []){
     return blog;
 };
 
+//A function to check type of variables
 async function validateType(resp, expectedType, ...variables){
     for(vals of variables){
         if(typeof vals != expectedType){
@@ -58,21 +43,9 @@ async function validateType(resp, expectedType, ...variables){
     }
 
     return true
-} 
-
-async function createNotification(notif){
-    const createNotif = await notificationsTB.create({
-        userid: notif.userid,
-        acted_userid: notif.acted_userid,
-        action_name: notif.action_name,
-        blog_id: notif.blog_id ? notif.blog_id : null,
-        notif_title: notif.notif_title,
-        comment_id: notif.comment_id ? notif.comment_id : null,
-        timestamp: Date.now().toString(),
-        seen: 0
-    })
 };
 
+//A function to validate web-scoket token
 async function validateWST(token){
     try {
         const userInfo = jwt.verify(token, process.env.JWT_SECRET);
@@ -80,8 +53,9 @@ async function validateWST(token){
     } catch (error) {
         return [false, null];
     }
-}
+};
 
+//A function to validate web-scoket messages
 async function validateWSM(message){
     try {
         const data = JSON.parse(message); //Parsing message comming from client and returning it if it's valid
@@ -97,8 +71,9 @@ async function validateWSM(message){
       } catch (error) {
         return [false, null];
       }
-}
+};
 
+//A function to check variable(s) are undefined or not
 async function isUndefined(resp, ...params){
     if(params.includes(undefined)){
         const message = {message: "All fields required", state: "failed"};
@@ -107,8 +82,9 @@ async function isUndefined(resp, ...params){
     }
     
     return false
-}
+};
 
+//A function to validate username rules
 async function validateUsername(username, resp){
     if(username.length < 3) {
         const message = {message: "Username is too short", state: "failed"};
@@ -131,17 +107,14 @@ async function validateUsername(username, resp){
     }
 
     return true
-}
+};
 
 module.exports = {
     validateUserInputAsNumber,
-    sendResponse,
-    removeItemFromArray,
     validateBlogInfo,
-    createNotification,
-    validateWSM,
-    validateWST,
-    isUndefined,
     validateUsername,
-    validateType
+    validateType,
+    validateWST,
+    validateWSM,
+    isUndefined
 }

@@ -5,9 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber } = require("../../utils/functions");
-const { sendResponse } = require("../../utils/functions");
-const { createNotification } = require("../../utils/functions");
+const { validateUserInputAsNumber } = require("../../utils/validate");
+const { sendResponse, createNotification } = require("../../utils/opt");
 
 router.get("/", (req, resp) => {
     var blogs = []

@@ -3,7 +3,8 @@ const router = express.Router();
 const crypto = require('crypto')
 const { usersTB, dead_sessionsTB } = require("../../database");
 const jwt = require('jsonwebtoken');
-const { sendResponse, isUndefined, validateUsername } = require("../../utils/functions");
+const { isUndefined, validateUsername } = require("../../utils/validate");
+const { sendResponse } = require("../../utils/opt");
 var validator = require("email-validator");
 
 router.post("/login", async (req, resp) => {

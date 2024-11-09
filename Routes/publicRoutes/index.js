@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { usersTB, blogsTB } = require("../../database");
-const { sendResponse } = require("../../utils/functions");
-const { checkBlogInfo } = require("../../utils/functions");
+const { sendResponse } = require("../../utils/opt");
+const { validateBlogInfo } = require("../../utils/validate");
 
 router.get("/search", async (req, resp) => {
     if(!req.query.q){

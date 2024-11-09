@@ -2,9 +2,8 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber, isUndefined } = require("../../utils/functions");
-const { sendResponse } = require("../../utils/functions");
-const { validateBlogInfo, validateType } = require("../../utils/functions");
+const { validateUserInputAsNumber, isUndefined, validateBlogInfo, validateType } = require("../../utils/validate");
+const { sendResponse } = require("../../utils/opt");
 
 router.get("/", async (req, resp) => {
     const blogLists = [];
