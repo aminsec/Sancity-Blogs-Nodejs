@@ -1,14 +1,19 @@
 const jwt = require('jsonwebtoken');
 const { sendResponse } = require("./opt");
 
-function validateUserInputAsNumber(value) {
-    value = value.toString();
-    const validBlogNumberRG =  new RegExp('^[0-9]+$'); //This regex gets only numbers
-    const isValidBlogNumber = value.match(validBlogNumberRG);
-    if(isValidBlogNumber){
-        return true
+async function validateUserInputAsNumber(...value) {
+    for(vals of value){
+        num = vals.toString();
+        const validBlogNumberRG =  new RegExp('^[0-9]+$'); //This regex gets only numbers
+        const isValidBlogNumber = num.match(validBlogNumberRG);
+        if(isValidBlogNumber){
+            continue
+        }else{
+            return false
+        }
     }
-    return false
+
+    return true
 };
 
 //A function to removing sensitive fields from blog info

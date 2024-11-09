@@ -319,13 +319,8 @@ router.get("/:blogId/comments/:commentId", async (req, resp) => {
     const { commentId } = req.params;
     const { blogId } = req.params;
     
-    if(!validateUserInputAsNumber(commentId)){
+    if(!await validateUserInputAsNumber(commentId, blogId)){
         const message = {state: "failed", message: "Comment not found"};
-        sendResponse(message, resp);
-        return
-    }
-    if(!validateUserInputAsNumber(blogId)){
-        const message = {state: "failed", message: "Blog not found"};
         sendResponse(message, resp);
         return
     }
@@ -340,15 +335,16 @@ router.get("/:blogId/comments/:commentId", async (req, resp) => {
     });
 
     if(areCommentsOn){
-        const getComment = await commentsTB.findOne({
+        //Quering comment
+        const comment = await commentsTB.findOne({
             where: {
                 commentId: commentId,
                 blog_id: blogId
             }
         });
 
-        if(getComment){
-            const commentInfo = getComment.dataValues;
+        if(comment){
+            const commentInfo = comment.dataValues;
             const message = {state: "success", comment: commentInfo};
             sendResponse(message, resp);
         }else{
