@@ -283,8 +283,7 @@ router.get("/favorites", async (req, resp) => {
                 continue
             }
 
-            var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
-            var blogData = checkBlogInfo(getBlogData.dataValues, keysToExtractFromBlog);
+            var blogData = await validateBlogInfo(getBlogData.dataValues);
             const userBLogData = await usersTB.findOne({
                 where: {
                     userid: blogData.userid

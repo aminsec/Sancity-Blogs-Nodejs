@@ -114,32 +114,39 @@ router.post("/magicLink", async (req, resp) => {
 
 router.get("/:blogId", async (req, resp) => {
     var { blogId } = req.params;
+
+    //Validating blog id to be numver
     if(!validateUserInputAsNumber(blogId)){
         sendResponse({"state": "failed", "message": "Not found"}, resp);
         return
     };
+
+    //Quering blog info
     const getBlog = await blogsTB.findOne({
         where: {
             blog_id: blogId,
             is_public: 1
         }
-    })
+    });
+
     //Checking if something has backed from database
     if(!getBlog){
-        sendResponse({"state": "failed", "message": "Not found"}, resp);
+        const message = {state: "failed", message: "Not found"};
+        sendResponse(message, resp);
         return
     }
 
     //Checking blog Info
-    var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
-    var blog = checkBlogInfo(getBlog.dataValues, keysToExtractFromBlog);
+    var blog = await validateBlogInfo(getBlog.dataValues);
+
     //getting the user information of blog 
     var blogUserId = blog.userid;
     const blogUserInfo = await usersTB.findOne({
         where: {
             userid: blogUserId
         }
-    })
+    });
+
     var blogUserDataObj = {
         userid: blogUserInfo.dataValues.userid,
         username: blogUserInfo.dataValues.username,
@@ -147,45 +154,58 @@ router.get("/:blogId", async (req, resp) => {
     };
 
     blog.user = blogUserDataObj;
+
     //Trying to get the user's liked and saved blogs to see if user has liked or saved this post or not, if user is loggin
     try {
+        //If user was not authenticated, this block go through an error
         var user = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+
+        //Quering user's liked blogs
         const userLikes = await usersTB.findAll({
             attributes: ["likedPosts"],
             where: {
                 userid: user.id
             }
-        })
+        });
+
+        //Quering user's saved blogs
         const userSaveds = await usersTB.findAll({
             attributes: ["savedPosts"],
             where: {
                 userid: user.id
             }
-        })
+        });
+
         const likesData = userLikes[0].dataValues.likedPosts;
         const likes = likesData.split(",");
         const savesData = userSaveds[0].dataValues.savedPosts;
         const saves = savesData.split(",");
         
+        //Checking if blog is in liked list
         if(likes.includes(blogId)){
             blog.isLiked = true;
         }
+
+        //Checking if blog is in saved list
         if(saves.includes(blogId)){
             blog.isSaved = true
         }
-        sendResponse({"state": "success", "content": blog}, resp);
-    //if above block code goes into error, it means user is not loggin, then we just show the post without isLiked or isSaved
+
+        const message = {state: "success", content: blog};
+        sendResponse(message, resp);
+
+    //if above block code goes into error, it means user is not authenticated, then we just show the post without isLiked or isSaved
     } catch (error) {
         if(blog){
-            sendResponse({"state": "success", "content": blog}, resp);
+            const message = {state: "success", content: blog};
+            sendResponse(message, resp);
             return
         }else{
-            const data = {"state": "failed", "message": "Not found"};
-            sendResponse(data, resp);
+            const message = {state: "failed", message: "Not found"};
+            sendResponse(message, resp);
         }
     }
-})
-
+});
 
 router.get("/:blogId/comments", async (req, resp) => {
     var data = {state: "success", comments: []};
