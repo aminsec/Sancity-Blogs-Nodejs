@@ -48,6 +48,18 @@ async function validateBlogInfo(blog, extraKeysToBeFilter = []){
     return blog;
 };
 
+async function validateType(resp, expectedType, ...variables){
+    for(vals of variables){
+        if(typeof vals != expectedType){
+            const message = {message: "Invalid input type", state: "failed"};
+            sendResponse(message, resp, {}, 400);
+            return false
+        }
+    }
+
+    return true
+} 
+
 async function createNotification(notif){
     const createNotif = await notificationsTB.create({
         userid: notif.userid,
@@ -130,5 +142,6 @@ module.exports = {
     validateWSM,
     validateWST,
     isUndefined,
-    validateUsername
+    validateUsername,
+    validateType
 }

@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber } = require("../../utils/functions");
+const { validateUserInputAsNumber, isUndefined } = require("../../utils/functions");
 const { sendResponse } = require("../../utils/functions");
-const { validateBlogInfo } = require("../../utils/functions");
+const { validateBlogInfo, validateType } = require("../../utils/functions");
 
 router.get("/", async (req, resp) => {
     const blogLists = [];
@@ -26,6 +26,7 @@ router.get("/", async (req, resp) => {
                 userid: validatedBlog.userid
             }
         });
+        
         if(blogsUserInfo){
             var userInfo = {
                 username: blogsUserInfo.username,
@@ -36,71 +37,78 @@ router.get("/", async (req, resp) => {
             blogLists.push(validatedBlog);
         }
     }
+
     const message = {state: "success", "blogs": {"len": blogLists.length, "content": blogLists}};
     sendResponse(message, resp);
 });
 
 router.post("/magicLink", async (req, resp) => {
-    const { token } = req.body;
+    //Getting and converting token to string
+    const { token }  = req.body;
+
     //Validating user input 
-    if(token == undefined || (typeof token != "string")){
-        var message = {state: "failed", message: "Token not found"};
-        sendResponse(message, resp);
-        return
-    }
-    //Checking if token is exist 
-    const isTokenExist = await blogsTB.findOne({
+    if(await isUndefined(resp, token) || await validateType(resp, "string", token) == false) return;
+
+    //Checking if token exists 
+    const tokenInfo = await blogsTB.findOne({
         where: {
             blog_magicToken: token
         }
     });
 
-    if(isTokenExist){
-        //Checking token expire date
-        const tokenExpireDate = isTokenExist.dataValues.magicToken_exp;
+    if(tokenInfo){
+        //Checking token expiration date
+        const tokenExpireDate = tokenInfo.dataValues.magicToken_exp;
         const nowTime = Date.now();
-        const tokenExpired = tokenExpireDate < nowTime; //If right now time is greater than  token exp date, it means token has expired
+
+        //If time of right now is greater than token exp date, it means token has expired
+        const tokenExpired = nowTime > tokenExpireDate;
         if(tokenExpired){
             const message = {state: "failed", message: "Token has expired"};
             sendResponse(message, resp);
             return
-        }else{
-            //If token is valid, we show blog info
-            const getBlog = await blogsTB.findOne({
-                where: {
-                    blog_magicToken: token
-                }
-            })
-            //Checking if something has backed from database
-            if(!getBlog){
-                sendResponse({"state": "failed", "message": "Blog Not found"}, resp);
-                return
-            }
+        }
 
-            //Checking blog Info
-            var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
-            var blog = checkBlogInfo(getBlog.dataValues, keysToExtractFromBlog);
-            //getting the user of blog information
-            var blogUserId = blog.userid;
-            const blogUserInfo = await usersTB.findOne({
-                where: {
-                    userid: blogUserId
-                }
-            })
-            var blogUserDataObj = {
-                userid: blogUserInfo.dataValues.userid,
-                username: blogUserInfo.dataValues.username,
-                profilePic: blogUserInfo.dataValues.profilePic
-            };
+        //If token is valid, we show blog info
+        const getBlog = await blogsTB.findOne({
+            where: {
+                blog_magicToken: token
+            }
+        });
         
-            blog.user = blogUserDataObj;
-            const data = {state: "success", content: blog};
-            sendResponse(data, resp);
+        //Checking if something has backed from database
+        if(!getBlog){
+            const message = {state: "failed", message: "Blog Not found"};
+            sendResponse(message, resp);
             return
         }
+
+        //Checking blog Info
+        var blog = await validateBlogInfo(getBlog.dataValues);
+
+        //getting the user of blog information
+        var blogUserId = blog.userid;
+        const blogUserInfo = await usersTB.findOne({
+            where: {
+                userid: blogUserId
+            }
+        });
+
+        var blogUserDataObj = {
+            userid: blogUserInfo.dataValues.userid,
+            username: blogUserInfo.dataValues.username,
+            profilePic: blogUserInfo.dataValues.profilePic
+        };
+    
+        blog.user = blogUserDataObj;
+        const data = {state: "success", content: blog};
+        sendResponse(data, resp);
+        return
+        
     }else{
+        //Sending error if token not found
         const message = {state: "failed", message: "Blog not found"};
-        sendResponse(message, resp);
+        sendResponse(message, resp, {});
         return
     }
 })
