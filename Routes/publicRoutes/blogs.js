@@ -213,17 +213,14 @@ router.get("/:blogId/comments", async (req, resp) => {
     var { limit } = req.query;
     var { offset } = req.query;
 
+    //Validating user input as number
     if(!validateUserInputAsNumber(blogId)){
         sendResponse({state: "failed", message: "Blog not found"}, resp);
         return
     }
 
     //Validating limit and offset value
-    if(!limit || !offset){
-        const message = {state: "failed", message: "Invalid limit or offset value"};
-        sendResponse(message, resp);
-        return
-    }
+    if(await isUndefined(resp, limit, offset)) return;
 
     if(!validateUserInputAsNumber(limit) || !validateUserInputAsNumber(offset)){
         const message = {state: "failed", message: "Invalid limit or offset value"};
@@ -242,9 +239,10 @@ router.get("/:blogId/comments", async (req, resp) => {
             isCommentOff: 0,
             is_public: 1
         }
-    })
+    });
 
     if(areCommentsOn){
+        //Quering for comments
         const comments = await commentsTB.findAll({
             where: {
                 blog_id: blogId
@@ -256,58 +254,64 @@ router.get("/:blogId/comments", async (req, resp) => {
            offset: offset
         });
 
+        //Quering for all commenst to get their cound - we need it in front
         const getAllCommentsLen = await commentsTB.findAll({
             where: {
                 blog_id: blogId
             }
         });
+
         //Giving all comments count, we need it in frontend
         data.allCommentsLen = getAllCommentsLen.length;
         
-        const preparingComments = async () => {
-            for(index in comments){
-                var commentData = {};
-                commentData.comment = comments[index].dataValues.comment_text;
-                commentData.Id = comments[index].dataValues.commentId;
-                commentData.likes = comments[index].dataValues.commentLikes;
-                var commentedUserId = comments[index].dataValues.userid;
-                commentData.date = comments[index].dataValues.commentedAt;
-                commentData.userid = comments[index].dataValues.userid;
-                const commentedUserInfo = await usersTB.findOne({
-                    attributes: ["profilePic", "username"],
-                    where: {
-                        userid: commentedUserId
-                    }
-                })
-                commentData.username = commentedUserInfo.dataValues.username;
-                commentData.profilePic = commentedUserInfo.dataValues.profilePic;
-                //Checking if user has liked the comment, if is loggin
-                try {                   
-                    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);                  
-                    const getUserLikedComments = await usersTB.findOne({
-                        where: {
-                            userid: userInfo.id
-                        },
-                        attributes: ["likedComments"]
-                    })
-                    var likedComments = getUserLikedComments.dataValues.likedComments;
-                    var commentsId = likedComments.split(",");
-                    if(commentsId.includes(comments[index].dataValues.commentId.toString())){
-                        commentData.isLiked = true;
-                    }else{
-                        commentData.isLiked = false;
-                    }
-
-                } catch (error) {
-                   null
+        //Preparing comments to be sent
+        for(let comment of comments){
+            var commentData = {};
+            commentData.comment = comment.comment_text;
+            commentData.Id = comment.commentId;
+            commentData.likes = comment.commentLikes;
+            var commentedUserId = comment.userid;
+            commentData.date = comment.commentedAt;
+            commentData.userid = comment.userid;
+            
+            //Quering the user of the comment profile
+            const commentedUserInfo = await usersTB.findOne({
+                attributes: ["profilePic", "username"],
+                where: {
+                    userid: commentedUserId
                 }
-                data.comments.push(commentData);
+            });
+            commentData.username = commentedUserInfo.dataValues.username;
+            commentData.profilePic = commentedUserInfo.dataValues.profilePic;
+
+            //Checking if user has liked the comment, if the user is authenticated
+            try {                   
+                const userInfo = req.userInfo;  
+                const getUserLikedComments = await usersTB.findOne({
+                    where: {
+                        userid: userInfo.id
+                    },
+                    attributes: ["likedComments"]
+                });
+                var likedComments = getUserLikedComments.dataValues.likedComments;
+                var commentsId = likedComments.split(",");
+                if(commentsId.includes(comments[index].dataValues.commentId.toString())){
+                    commentData.isLiked = true;
+                }else{
+                    commentData.isLiked = false;
+                }
+
+            } catch (error) {
+                null
             }
+            data.comments.push(commentData);
         }
-        await preparingComments();
+        
         sendResponse(data, resp);
     }else{
-        sendResponse({state: "failed", message: "Not found"}, resp);
+        const message = {state: "failed", message: "Not found"};
+        sendResponse(message, resp);
+        return
     }
 });
 
