@@ -1,4 +1,4 @@
-const { notificationsTB } = require("../database");
+const { notificationsTB, usersTB } = require("../database");
 
 //Function to send normall messages
 function sendResponse(data, resp, headers = {}, code = 200){
@@ -32,8 +32,40 @@ async function createNotification(notif){
     })
 };
 
+async function queryUserInfo(userid){
+    const info = await usersTB.findOne({
+        where: {
+            userid: userid
+        }
+    });
+
+    if(info){
+        const userInfo = info.dataValues;
+        const data = {
+            userid: userInfo.userid,
+            username: userInfo.username,
+            joinedAt: userInfo.joinDate,
+            profilePic: userInfo.profilePic,
+            bio: userInfo.bio
+        };
+
+        return data;
+    }else{
+        const message = {state: "failed", message: "User not found"};
+        return message;
+    }
+}
+
+async function sortObjectByValuesDescending(obj) {
+    return new Map(
+        Object.entries(obj).sort(([, valueA], [, valueB]) => valueB - valueA)
+    );
+}
+
 module.exports = {
     sendResponse,
     removeItemFromArray,
-    createNotification
+    createNotification,
+    queryUserInfo,
+    sortObjectByValuesDescending
 }

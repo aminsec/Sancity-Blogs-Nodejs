@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber, isUndefined, validateBlogInfo, validateType } = require("../../utils/validate");
-const { sendResponse } = require("../../utils/opt");
+const { sendResponse, sortObjectByValuesDescending, queryUserInfo } = require("../../utils/opt");
 
 router.get("/", async (req, resp) => {
     const blogLists = [];
@@ -38,6 +39,71 @@ router.get("/", async (req, resp) => {
     }
 
     const message = {state: "success", "blogs": {"len": blogLists.length, "content": blogLists}};
+    sendResponse(message, resp);
+});
+
+router.get("/search", async (req, resp) => {
+    const userSearchQuery = req.query.q;
+
+    //Checking if parameter is not defined
+    if(await isUndefined(resp, userSearchQuery)) return;
+
+    //Spliting the user input to have better match with blogs tags
+    const userSearchQueryList = userSearchQuery.split(" "); 
+
+    //Defining score to each blog to sort the most related blogs to user search query
+    var blogsScore = {};
+
+    //Getting blogs that their tags or blog_title includes with user search query
+    const allBlogs = await blogsTB.findAll({
+        where: {
+            is_public: 1,
+        }
+    });
+
+    for(blog of allBlogs){
+        const blogTag = blog.tags;
+        //Defining score to each blog
+        blogsScore[blog.blog_id] = 0;
+        //Spliting blogs tag by '#'
+        var tags = blogTag.split("#");
+        tags.splice(0, 1); //removing the first index that is null
+        for(let tag of tags){
+            for(let word of userSearchQueryList){
+                //If the user searched word is in tags, we add one score to blog
+                if(tag.includes(word)){
+                    blogsScore[blog.blog_id] =  blogsScore[blog.blog_id] + 1;
+                }
+            }
+        }
+    }
+
+    //removing unrelated blogs that has 0 score
+    for(let key in blogsScore){
+        if(blogsScore[key] == 0){
+            delete blogsScore[key];
+        }
+    }
+   
+    //Sorting obj by their scores and getting blog
+    var response = [];
+    var sortedBlogs = await sortObjectByValuesDescending(blogsScore); //returns a Map
+    for(let id of sortedBlogs.keys()){
+        for(let blog of allBlogs){
+            if(id == blog.blog_id){
+                //Validating blog
+                var validBlog = await validateBlogInfo(blog.dataValues);
+                //Getting each blog user information 
+                var userid = validBlog.userid;
+                const userInfo = await queryUserInfo(userid);
+                validBlog.user = userInfo;
+                response.push(validBlog);
+                continue
+            }
+        }
+    }
+
+    const message = {state: "success", length: response.length, blogs: response};
     sendResponse(message, resp);
 });
 
@@ -352,6 +418,6 @@ router.get("/:blogId/comments/:commentId", async (req, resp) => {
             sendResponse(message, resp);
         }
     }
-})
+});
 
 module.exports = router;

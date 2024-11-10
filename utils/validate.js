@@ -26,7 +26,7 @@ async function validateBlogInfo(blog, extraKeysToBeFilter = []){
     
     //Removing sensitive keys
     keysToBeFilter.map(key => {
-        if(blog[key]){
+        if(blog[key] || blog[key] == null){
             delete blog[key];
         }
     });
