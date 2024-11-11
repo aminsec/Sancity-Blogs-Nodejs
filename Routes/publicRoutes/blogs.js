@@ -197,56 +197,9 @@ router.get("/:blogId", async (req, resp) => {
     var blogUserId = validatedBlog.userid;
     validatedBlog.user = await queryUserInfo(blogUserId);
 
-    //Trying to get the user's liked and saved blogs to see if user has liked or saved this post or not, if user is loggin
-    try {
-        //If user was not authenticated, this block go through an error
-        var user = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-
-        //Quering user's liked blogs
-        const userLikes = await usersTB.findAll({
-            attributes: ["likedPosts"],
-            where: {
-                userid: user.id
-            }
-        });
-
-        //Quering user's saved blogs
-        const userSaveds = await usersTB.findAll({
-            attributes: ["savedPosts"],
-            where: {
-                userid: user.id
-            }
-        });
-
-        const likesData = userLikes[0].dataValues.likedPosts;
-        const likes = likesData.split(",");
-        const savesData = userSaveds[0].dataValues.savedPosts;
-        const saves = savesData.split(",");
-        
-        //Checking if blog is in liked list
-        if(likes.includes(blogId)){
-            validatedBlog.isLiked = true;
-        }
-
-        //Checking if blog is in saved list
-        if(saves.includes(blogId)){
-            validatedBlog.isSaved = true
-        }
-
-        const message = {state: "success", content: validatedBlog};
-        sendResponse(message, resp);
-
-    //if above block code goes into error, it means user is not authenticated, then we just show the post without isLiked or isSaved
-    } catch (error) {
-        if(validatedBlog){
-            const message = {state: "success", content: validatedBlog};
-            sendResponse(message, resp);
-            return
-        }else{
-            const message = {state: "failed", message: "Not found"};
-            sendResponse(message, resp);
-        }
-    }
+    const message = {state: "success", content: validatedBlog};
+    sendResponse(message, resp);
+    return
 });
 
 router.get("/:blogId/comments", async (req, resp) => {
