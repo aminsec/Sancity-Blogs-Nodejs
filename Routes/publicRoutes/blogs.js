@@ -7,7 +7,7 @@ const { validateUserInputAsNumber, isUndefined, validateBlogInfo, validateType }
 const { sendResponse, sortObjectByValuesDescending, queryUserInfo } = require("../../utils/opt");
 
 router.get("/", async (req, resp) => {
-    const blogLists = [];
+    const blogsList = [];
 
     //Getting all blogs from database
     const allBlogs = await blogsTB.findAll({
@@ -22,8 +22,7 @@ router.get("/", async (req, resp) => {
 
         //Getting user's info of each blog
         validatedBlog.user = await queryUserInfo(validatedBlog.userid);
-        blogLists.push(validatedBlog);
-        
+        blogsList.push(validatedBlog);
     }
 
     const message = {state: "success", "blogs": {"len": blogLists.length, "content": blogLists}};
