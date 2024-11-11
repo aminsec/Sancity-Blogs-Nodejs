@@ -5,6 +5,22 @@ const { commentsTB, usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber } = require("../../utils/validate");
 const { removeItemFromArray, createNotification, sendResponse } = require("../../utils/opt");
 
+router.get("/liked-comments", async (req, resp) => {
+    const { userInfo } = req;
+
+    //Quering liked blogs
+    const likedComments = await usersTB.findOne({
+        attributes: ["likedComments"],
+        where: {
+            userid: userInfo.id
+        }
+    });
+
+    var likedCommentsList = likedComments.dataValues.likedComments.split(",");
+    const message = {state: "success", liked_comments: likedCommentsList};
+    sendResponse(message, resp);
+});
+
 router.post("/:blogId/addComment", async (req, resp) => {
     var { blogId } = req.params;
     if(!validateUserInputAsNumber(blogId)){

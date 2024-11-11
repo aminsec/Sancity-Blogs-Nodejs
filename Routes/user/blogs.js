@@ -127,6 +127,38 @@ router.post("/new", async (req, resp) => {
     }
 });
 
+router.get("/liked-blogs", async (req, resp) => {
+    const { userInfo } = req;
+
+    //Quering liked blogs
+    const likedBlogs = await usersTB.findOne({
+        attributes: ["likedPosts"],
+        where: {
+            userid: userInfo.id
+        }
+    });
+
+    var likedBlogsList = likedBlogs.dataValues.likedPosts.split(",");
+    const message = {state: "success", liked_blogs: likedBlogsList};
+    sendResponse(message, resp);
+});
+
+router.get("/saved-blogs", async (req, resp) => {
+    const { userInfo } = req;
+
+    //Quering liked blogs
+    const likedBlogs = await usersTB.findOne({
+        attributes: ["savedPosts"],
+        where: {
+            userid: userInfo.id
+        }
+    });
+
+    var likedBlogsList = likedBlogs.dataValues.savedPosts.split(",");
+    const message = {state: "success", saved_blogs: likedBlogsList};
+    sendResponse(message, resp);
+});
+
 router.get("/:blogId", async (req, resp) => {
     var { blogId } = req.params;
     const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
@@ -178,7 +210,7 @@ router.get("/:blogId", async (req, resp) => {
         sendResponse(data, resp);
         return
     }
-})
+});
 
 //Deleting blogs
 router.delete("/:blogId", async (req, resp) => {
@@ -206,7 +238,7 @@ router.delete("/:blogId", async (req, resp) => {
     sendResponse(data, resp)
    }
 
-})
+});
 
 router.get("/:blogId/like", async (req, resp) => {
     var { blogId } = req.params;

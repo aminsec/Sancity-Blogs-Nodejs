@@ -255,17 +255,12 @@ router.get("/:blogId/comments", async (req, resp) => {
     var { limit } = req.query;
     var { offset } = req.query;
 
-    //Validating user input as number
-    if(!validateUserInputAsNumber(blogId)){
-        sendResponse({state: "failed", message: "Blog not found"}, resp);
-        return
-    }
-
     //Validating limit and offset value
     if(await isUndefined(resp, limit, offset)) return;
 
-    if(!validateUserInputAsNumber(limit) || !validateUserInputAsNumber(offset)){
-        const message = {state: "failed", message: "Invalid limit or offset value"};
+    //Validating user input as number
+    if(!validateUserInputAsNumber(limit, offset, blogId)){
+        const message = {state: "failed", message: "Invalid inputs"};
         sendResponse(message, resp);
         return
     }
@@ -296,7 +291,7 @@ router.get("/:blogId/comments", async (req, resp) => {
            offset: offset
         });
 
-        //Quering for all commenst to get their cound - we need it in front
+        //Quering for all commenst to get their count - we need it in front
         const getAllCommentsLen = await commentsTB.findAll({
             where: {
                 blog_id: blogId
@@ -312,40 +307,10 @@ router.get("/:blogId/comments", async (req, resp) => {
             commentData.comment = comment.comment_text;
             commentData.Id = comment.commentId;
             commentData.likes = comment.commentLikes;
-            var commentedUserId = comment.userid;
             commentData.date = comment.commentedAt;
-            commentData.userid = comment.userid;
             
-            //Quering the user of the comment profile
-            const commentedUserInfo = await usersTB.findOne({
-                attributes: ["profilePic", "username"],
-                where: {
-                    userid: commentedUserId
-                }
-            });
-            commentData.username = commentedUserInfo.dataValues.username;
-            commentData.profilePic = commentedUserInfo.dataValues.profilePic;
-
-            //Checking if user has liked the comment, if the user is authenticated
-            try {                   
-                const userInfo = req.userInfo;  
-                const getUserLikedComments = await usersTB.findOne({
-                    where: {
-                        userid: userInfo.id
-                    },
-                    attributes: ["likedComments"]
-                });
-                var likedComments = getUserLikedComments.dataValues.likedComments;
-                var commentsId = likedComments.split(",");
-                if(commentsId.includes(comments[index].dataValues.commentId.toString())){
-                    commentData.isLiked = true;
-                }else{
-                    commentData.isLiked = false;
-                }
-
-            } catch (error) {
-                null
-            }
+            //Quering the user info of comment
+            commentData.user = await queryUserInfo(comment.userid);
             data.comments.push(commentData);
         }
         
