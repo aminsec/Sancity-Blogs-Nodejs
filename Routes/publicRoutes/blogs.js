@@ -21,21 +21,9 @@ router.get("/", async (req, resp) => {
         const validatedBlog = await validateBlogInfo(blog.dataValues);
 
         //Getting user's info of each blog
-        const blogsUserInfo = await usersTB.findOne({
-            where: {
-                userid: validatedBlog.userid
-            }
-        });
+        validatedBlog.user = await queryUserInfo(validatedBlog.userid);
+        blogLists.push(validatedBlog);
         
-        if(blogsUserInfo){
-            var userInfo = {
-                username: blogsUserInfo.username,
-                userid: blogsUserInfo.userid,
-                profilePic: blogsUserInfo.profilePic
-            };
-            validatedBlog.user = userInfo;
-            blogLists.push(validatedBlog);
-        }
     }
 
     const message = {state: "success", "blogs": {"len": blogLists.length, "content": blogLists}};
