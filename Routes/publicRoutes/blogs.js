@@ -138,21 +138,9 @@ router.post("/magicLink", async (req, resp) => {
         //Checking blog Info
         var blog = await validateBlogInfo(getBlog.dataValues);
 
-        //getting the user of blog information
+        //Quering user information of blog
         var blogUserId = blog.userid;
-        const blogUserInfo = await usersTB.findOne({
-            where: {
-                userid: blogUserId
-            }
-        });
-
-        var blogUserDataObj = {
-            userid: blogUserInfo.dataValues.userid,
-            username: blogUserInfo.dataValues.username,
-            profilePic: blogUserInfo.dataValues.profilePic
-        };
-    
-        blog.user = blogUserDataObj;
+        blog.user = await queryUserInfo(blogUserId);
         const data = {state: "success", content: blog};
         sendResponse(data, resp);
         return
@@ -160,7 +148,7 @@ router.post("/magicLink", async (req, resp) => {
     }else{
         //Sending error if token not found
         const message = {state: "failed", message: "Blog not found"};
-        sendResponse(message, resp, {});
+        sendResponse(message, resp);
         return
     }
 })
@@ -279,6 +267,7 @@ router.get("/:blogId/comments/:commentId", async (req, resp) => {
     const { commentId } = req.params;
     const { blogId } = req.params;
     
+    //Checking user inputs
     if(!await validateUserInputAsNumber(commentId, blogId)){
         const message = {state: "failed", message: "Comment not found"};
         sendResponse(message, resp);
