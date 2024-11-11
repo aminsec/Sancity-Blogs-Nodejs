@@ -25,7 +25,7 @@ router.get("/", async (req, resp) => {
         blogsList.push(validatedBlog);
     }
 
-    const message = {state: "success", "blogs": {"len": blogLists.length, "content": blogLists}};
+    const message = {state: "success", "blogs": {"len": blogsList.length, "content": blogsList}};
     sendResponse(message, resp);
 });
 
@@ -170,12 +170,13 @@ router.get("/:blogId", async (req, resp) => {
 
     //Validating blog id to be numver
     if(!validateUserInputAsNumber(blogId)){
-        sendResponse({"state": "failed", "message": "Not found"}, resp);
+        const message = {state: "failed", message: "Not found"}
+        sendResponse(message, resp);
         return
     };
 
     //Quering blog info
-    const getBlog = await blogsTB.findOne({
+    const blog = await blogsTB.findOne({
         where: {
             blog_id: blogId,
             is_public: 1
@@ -183,30 +184,18 @@ router.get("/:blogId", async (req, resp) => {
     });
 
     //Checking if something has backed from database
-    if(!getBlog){
+    if(!blog){
         const message = {state: "failed", message: "Not found"};
         sendResponse(message, resp);
         return
     }
 
     //Checking blog Info
-    var blog = await validateBlogInfo(getBlog.dataValues);
+    var validatedBlog = await validateBlogInfo(blog.dataValues);
 
     //getting the user information of blog 
-    var blogUserId = blog.userid;
-    const blogUserInfo = await usersTB.findOne({
-        where: {
-            userid: blogUserId
-        }
-    });
-
-    var blogUserDataObj = {
-        userid: blogUserInfo.dataValues.userid,
-        username: blogUserInfo.dataValues.username,
-        profilePic: blogUserInfo.dataValues.profilePic
-    };
-
-    blog.user = blogUserDataObj;
+    var blogUserId = validatedBlog.userid;
+    validatedBlog.user = await queryUserInfo(blogUserId);
 
     //Trying to get the user's liked and saved blogs to see if user has liked or saved this post or not, if user is loggin
     try {
@@ -236,21 +225,21 @@ router.get("/:blogId", async (req, resp) => {
         
         //Checking if blog is in liked list
         if(likes.includes(blogId)){
-            blog.isLiked = true;
+            validatedBlog.isLiked = true;
         }
 
         //Checking if blog is in saved list
         if(saves.includes(blogId)){
-            blog.isSaved = true
+            validatedBlog.isSaved = true
         }
 
-        const message = {state: "success", content: blog};
+        const message = {state: "success", content: validatedBlog};
         sendResponse(message, resp);
 
     //if above block code goes into error, it means user is not authenticated, then we just show the post without isLiked or isSaved
     } catch (error) {
-        if(blog){
-            const message = {state: "success", content: blog};
+        if(validatedBlog){
+            const message = {state: "success", content: validatedBlog};
             sendResponse(message, resp);
             return
         }else{
