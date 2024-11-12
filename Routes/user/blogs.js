@@ -5,28 +5,28 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber } = require("../../utils/validate");
+const { validateUserInputAsNumber, validateBlogInfo } = require("../../utils/validate");
 const { sendResponse, createNotification } = require("../../utils/opt");
 
-router.get("/", (req, resp) => {
-    var blogs = []
-    const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    blogsTB.findAll({
+router.get("/", async (req, resp) => {
+    var blogs = [];
+    const { userInfo } = req;
+
+    //Quering all user blogs
+    const userBlogs = await blogsTB.findAll({
         where: {
-            userid: token.id
+            userid: userInfo.id
         }
-    }).then(res => {
-        for(var i = 0; i < res.length; i++){
-            blogs.push(res[i].dataValues)
-        }
-        const data = {"state": "success", user: {username: token.username, profilePic: token.profilePic, userid: token.id}, data: blogs};
-        sendResponse(data, resp);
-        return
-    }).catch(() => {
-        const data = {"message": "Couldn't get blogs", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    })
+    });
+
+    //Validating blogs info
+    for(let blog of userBlogs){
+        const validatedBlog = await validateBlogInfo(blog.dataValues);
+        blogs.push(validatedBlog);
+    }
+
+    const message = {state: "success", blogs: blogs};
+    sendResponse(message, resp);
 });
 
 router.post("/new", async (req, resp) => {
