@@ -96,53 +96,30 @@ router.get("/saved-blogs", async (req, resp) => {
 
 router.get("/:blogId", async (req, resp) => {
     var { blogId } = req.params;
-    const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
+
     //Checking if the blogId is number
-    if(!validateUserInputAsNumber(blogId)){
-        sendResponse({"state": "failed", "message": "Not found"}, resp);
+    if(!await validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 
+    //Quering blog 
     const blog = await blogsTB.findOne({
         where: {
             blog_id: blogId,
-            userid: token.id
+            userid: userInfo.id
         }
     })
     
-    if(blog !== null){
-        //Getting the user liked posts to see if the user has liked this post
-        const userLikes = await usersTB.findAll({
-            attributes: ["likedPosts"],
-            where: {
-                userid: token.id
-            }
-        })
-     
-        const likesData = userLikes[0].dataValues.likedPosts;
-        const likes = likesData.split(",");
-        if(likes.includes(blogId.toString())){
-           blog.dataValues.isLiked = true
-        }
-
-        const userSaveds = await usersTB.findAll({
-            attributes: ["savedPosts"],
-            where: {
-                userid: token.id
-            }
-        })
-        const savesData = userSaveds[0].dataValues.savedPosts;
-        const saves = savesData.split(",");
-        if(saves.includes(blogId.toString())){
-            blog.dataValues.isSaved = true
-        }
-
-        const data = {"state": "success", "user": {username: token.username, profilePic: token.profilePic, userid: token.id}, "data": blog.dataValues};
-        sendResponse(data, resp);
+    if(blog){
+        const message = {state: "success", blog: blog};
+        sendResponse(message, resp);
         return
     }else{
-        const data = {"state": "failed", "message": "Not found"};
-        sendResponse(data, resp);
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 });
