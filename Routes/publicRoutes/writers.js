@@ -6,9 +6,10 @@ const { validateUserInputAsNumber, validateBlogInfo } = require("../../utils/val
 const { sendResponse } = require("../../utils/opt");
 
 router.get("/:userid", async (req, resp) => {
+    const { userid } = req.params; //The input can be a userid or a username
+    var response = [];
+
     //Returning alike users to input username
-    const { userid } = req.params;
-    var response = []
     const user = await usersTB.findAll({
         where: {
             [Op.or]: [
@@ -50,12 +51,12 @@ router.get("/:username/info", async(req, resp) => {
 
     if(userInfo){
         const userData = userInfo.dataValues;
-        var data = {}
-        data.userid = userInfo.userid;
-        data.username = userInfo.username;
-        data.bio = userInfo.bio;
-        data.profilePic = userInfo.profilePic;
-        data.joinDate = userInfo.joinDate;
+        var data = {};
+        data.userid = userData.userid;
+        data.username = userData.username;
+        data.bio = userData.bio;
+        data.profilePic = userData.profilePic;
+        data.joinDate = userData.joinDate;
 
         const message = {state: "success", user: data};
         sendResponse(message, resp);
@@ -69,7 +70,9 @@ router.get("/:username/info", async(req, resp) => {
 
 router.get("/:userid/blogs", async (req, resp) => {
     const { userid } = req.params; 
-    if(!validateUserInputAsNumber(userid)){
+
+    //Validating user input 
+    if(!await validateUserInputAsNumber(userid)){
         const message = {state: "failed", message: "User not found"};
         sendResponse(message, resp);
         return
@@ -84,16 +87,12 @@ router.get("/:userid/blogs", async (req, resp) => {
 
     if(getBlogs){
         var blogs = [];
-        var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
         for(var blog of getBlogs){
-            blogs.push(checkBlogInfo(blog.dataValues, keysToExtractFromBlog))
+            var validatedBlog = await validateBlogInfo(blog.dataValues);
+            blogs.push(validatedBlog);
         }
 
         const message = {state: "success", content: blogs};
-        sendResponse(message, resp);
-        return
-    }else{
-        const message = {state: "failed", message: "There is no any blog yet"};
         sendResponse(message, resp);
         return
     }
@@ -101,7 +100,7 @@ router.get("/:userid/blogs", async (req, resp) => {
 
 router.get("/:userid/liked-blogs", async (req, resp) => {
     const { userid } = req.params; 
-    if(!validateUserInputAsNumber(userid)){
+    if(!await validateUserInputAsNumber(userid)){
         const message = {state: "failed", message: "User not found"};
         sendResponse(message, resp);
         return
@@ -119,6 +118,11 @@ router.get("/:userid/liked-blogs", async (req, resp) => {
         let blogsId = blogIds.likedPosts.split(",");
         blogsId.shift() //Removing first that is "0" item 
         const message = {state: "success", blogs_id: blogsId};
+        sendResponse(message, resp);
+        return
+    }else{
+        //If the query result was null it means the user does not exist, because every user has a defalt likedPosts value
+        const message = {state: "failed", message: "User not found"};
         sendResponse(message, resp);
         return
     }

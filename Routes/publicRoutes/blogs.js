@@ -157,7 +157,7 @@ router.get("/:blogId", async (req, resp) => {
     var { blogId } = req.params;
 
     //Validating blog id to be numver
-    if(!validateUserInputAsNumber(blogId)){
+    if(!await validateUserInputAsNumber(blogId)){
         const message = {state: "failed", message: "Not found"}
         sendResponse(message, resp);
         return
@@ -200,7 +200,7 @@ router.get("/:blogId/comments", async (req, resp) => {
     if(await isUndefined(resp, limit, offset)) return;
 
     //Validating user input as number
-    if(!validateUserInputAsNumber(limit, offset, blogId)){
+    if(!await validateUserInputAsNumber(limit, offset, blogId)){
         const message = {state: "failed", message: "Invalid inputs"};
         sendResponse(message, resp);
         return
