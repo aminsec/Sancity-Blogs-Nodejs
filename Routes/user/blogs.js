@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber, validateBlogInfo } = require("../../utils/validate");
+const { validateUserInputAsNumber, validateBlogInfo, validateBlogValues } = require("../../utils/validate");
 const { sendResponse, createNotification } = require("../../utils/opt");
 
 router.get("/", async (req, resp) => {
@@ -30,98 +30,33 @@ router.get("/", async (req, resp) => {
 });
 
 router.post("/new", async (req, resp) => {
+    const { userInfo } = req;
     var { bannerPic, title, body, tags, option} = req.body;
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
 
-    if(title === undefined || body === undefined || tags === undefined || option === undefined || bannerPic === undefined){
-        const data = {"message": "All fields required", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    if(title == "" || body == ""){
-        const data = {"message": "Fields can not be empty", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    if(!option.hasOwnProperty("is_public") || !option.hasOwnProperty("commentsOff") || !option.hasOwnProperty("showLikes")){
-        const data = {"message": "Invalid options", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-    
-    if(typeof option.is_public !== "boolean" || typeof option.commentsOff !== "boolean" || typeof option.showLikes !== "boolean"){
-        const data = {"message": "Invalid options input", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    //Preventing DOS
-    if(tags.length > 255){
-        sendResponse({state: "failed", message: "Tags are too long"}, resp);
-        return
-    }
-
-    if(tags != ""){
-        if(tags[0] != "#"){
-            const data = {"message": "Tags must start with '#'", "state": "failed"};
-
-            sendResponse(data, resp);
-
-            return
-        }
-        var tagsValue = tags.split("#");
-        tagsValue.splice(0, 1);
-        var validTagRegex = new RegExp("^[a-zA-Z0-9]+$");
-        for(var i = 0; i < tagsValue.length; i++){
-            if(!tagsValue[i].match(validTagRegex)){
-                const data = {"message": "Just numbers and characters are allowed as tag", "state": "failed"};
-                sendResponse(data, resp);
-                return
-            }
-        }
-    }
-
-    if(body.length < 100){
-        const data = {"message": "Body must be at least 100 character", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    if(bannerPic){
-        const base64Data = bannerPic.replace(/^data:image\/png;base64,/, "");
-        const buffer = Buffer.from(base64Data, 'base64');
-        let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex")
-        var blog_image = "/api/v1/profilePics/" + randomFileName;
-        const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
-        fs.writeFile(filePath, buffer, (err) => {
-            if (err) {
-                console.log(err);
-            }
-        });
-    }
+    //Validating blog values before inserting
+    const checkResult = await validateBlogValues(bannerPic, title, body, tags, option, resp);
+    if(checkResult == false) return;
 
     //Getting blog created time
     var createdTime = Date.now().toString();
 
     try {
-        const insertBlog = await blogsTB.create({
+        await blogsTB.create({
             userid: userInfo.id,
             blog_content: body, 
-            blog_image: blog_image,
+            blog_image: checkResult.blog_image,
             blog_title: title,
             tags: tags,
             is_public: option.is_public,
             isCommentOff: option.commentsOff,
             showLikes: option.showLikes,
             createdAt:createdTime
-        })
-        const data = {"message": "Blog added successfully", "state": "success"};
+        });
+        const data = {message: "Blog added successfully", state: "success"};
         sendResponse(data, resp);
         return
     } catch (error) {
-        const data = {"message": "Couldn't add blog", "state": "failed"};
+        const data = {message: "Couldn't add blog", state: "failed"};
         sendResponse(data, resp);
         return
     }

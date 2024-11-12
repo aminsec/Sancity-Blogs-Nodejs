@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { sendResponse } = require("./opt");
+const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
 
 async function validateUserInputAsNumber(...value) {
     for(vals of value){
@@ -37,10 +40,82 @@ async function validateBlogInfo(blog, extraKeysToBeFilter = []){
     return blog;
 };
 
+async function validateBlogValues(bannerPic, title, body, tags, option, resp){
+    //Validating user inputs
+    if(await isUndefined(resp, bannerPic, title, body, tags, option)) return false;
+
+    if(title == "" || body == ""){
+        const message = {state: "failed", message: "Fields can not be empty"};
+        sendResponse(message, resp, {}, 400);
+        return false;
+    }
+
+    //Checking options value
+    if(!option.hasOwnProperty("is_public") || !option.hasOwnProperty("commentsOff") || !option.hasOwnProperty("showLikes")){
+        const message = {state: "failed", message: "Invalid options"};
+        sendResponse(message, resp, {}, 400);
+        return false;
+    }
+    
+    //Checking options types 
+    for(key of Object.values(option)){
+        if(!await validateType(resp, "boolean", key)) return;
+    }
+   
+
+    //Preventing DOS
+    if(tags.length > 255){
+        const message = {state: "failed", message: "Tags are too long"}
+        sendResponse(message, resp, {}, 400);
+        return false;
+    }
+
+    if(tags != ""){
+        //Validating tags
+        if(!tags.startsWith("#")){
+            const message = {state: "failed", message: "Tags must start with '#'"};
+            sendResponse(message, resp, {}, 400);
+            return false;
+        }
+        var tagsValue = tags.split("#");
+        tagsValue.splice(0, 1);
+        var validTagRegex = new RegExp("^[a-zA-Z0-9]+$");
+        for(var tag of tagsValue){
+            if(!tag.match(validTagRegex)){
+                const message = {state: "failed", message: "Just numbers and characters are allowed as tag"};
+                sendResponse(message, resp, {}, 400);
+                return false;
+            }
+        }
+    }
+
+    if(body.length < 100){
+        const message = {state: "failed", message: "Body must be at least 100 character"};
+        sendResponse(message, resp, {}, 400);
+        return false
+    }
+
+    if(bannerPic){
+        const base64Data = bannerPic.replace(/^data:image\/png;base64,/, "");
+        const buffer = Buffer.from(base64Data, 'base64');
+        let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex");
+        var blog_image = "/api/v1/profilePics/" + randomFileName;
+        const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
+        fs.writeFile(filePath, buffer, (err) => {
+            if (err) {
+                console.log(err);
+            }
+        });
+    }
+
+    return {state: "sucess", blog_image: blog_image};
+};
+
 //A function to check type of variables
 async function validateType(resp, expectedType, ...variables){
     for(vals of variables){
         if(typeof vals != expectedType){
+            console.log(typeof vals, ": ", expectedType);
             const message = {message: "Invalid input type", state: "failed"};
             sendResponse(message, resp, {}, 400);
             return false
@@ -116,6 +191,7 @@ async function validateUsername(username, resp){
 
 module.exports = {
     validateUserInputAsNumber,
+    validateBlogValues,
     validateBlogInfo,
     validateUsername,
     validateType,
