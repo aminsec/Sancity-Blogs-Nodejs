@@ -1,102 +1,152 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber } = require("../../utils/functions");
-const { sendResponse } = require("../../utils/functions");
-const { checkBlogInfo } = require("../../utils/functions");
+const { validateUserInputAsNumber, isUndefined, validateBlogInfo, validateType } = require("../../utils/validate");
+const { sendResponse, sortObjectByValuesDescending, queryUserInfo } = require("../../utils/opt");
 
 router.get("/", async (req, resp) => {
+    const blogsList = [];
+
     //Getting all blogs from database
-    const blogLists = [];
     const allBlogs = await blogsTB.findAll({
         where: {
             is_public: 1
         }
-    }) 
+    });
+   
+    for (blog of allBlogs){
+        //Removing sensitve keys from blog
+        const validatedBlog = await validateBlogInfo(blog.dataValues);
 
-    //Getting userid from each blog, and tieing related user info to each blog object
-    await Promise.all(allBlogs.map(async (blog) => {
-        var blog = blog.dataValues;
-        var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"]
-        var validatedBlog = checkBlogInfo(blog, keysToExtractFromBlog);
-        const getUserInfo = await usersTB.findOne({
-            where: {
-                userid: validatedBlog.userid
+        //Getting user's info of each blog
+        validatedBlog.user = await queryUserInfo(validatedBlog.userid);
+        blogsList.push(validatedBlog);
+    }
+
+    const message = {state: "success", "blogs": {"len": blogsList.length, "content": blogsList}};
+    sendResponse(message, resp);
+});
+
+router.get("/search", async (req, resp) => {
+    const userSearchQuery = req.query.q;
+
+    //Checking if parameter is not defined
+    if(await isUndefined(resp, userSearchQuery)) return;
+
+    //Spliting the user input to have better match with blogs tags
+    const userSearchQueryList = userSearchQuery.split(" "); 
+
+    //Defining score to each blog to sort the most related blogs to user search query
+    var blogsScore = {};
+
+    //Getting blogs that their tags or blog_title includes with user search query
+    const allBlogs = await blogsTB.findAll({
+        where: {
+            is_public: 1,
+        }
+    });
+
+    for(blog of allBlogs){
+        const blogTag = blog.tags;
+        //Defining score to each blog
+        blogsScore[blog.blog_id] = 0;
+        //Spliting blogs tag by '#'
+        var tags = blogTag.split("#");
+        tags.splice(0, 1); //removing the first index that is null
+        for(let tag of tags){
+            for(let word of userSearchQueryList){
+                //If the user searched word is in tags, we add one score to blog
+                if(tag.includes(word)){
+                    blogsScore[blog.blog_id] =  blogsScore[blog.blog_id] + 1;
+                }
             }
-        });
-        userInfo = {
-            username: getUserInfo.username,
-            userid: getUserInfo.userid,
-            profilePic: getUserInfo.profilePic
-        };
-        validatedBlog.user = userInfo;
+        }
+    }
 
-        blogLists.push(validatedBlog);
-    }));
+    //removing unrelated blogs that has 0 score
+    for(let key in blogsScore){
+        if(blogsScore[key] == 0){
+            delete blogsScore[key];
+        }
+    }
+   
+    //Sorting obj by their scores and getting blog
+    var response = [];
+    var sortedBlogs = await sortObjectByValuesDescending(blogsScore); //returns a Map
+    for(let id of sortedBlogs.keys()){
+        for(let blog of allBlogs){
+            if(id == blog.blog_id){
+                //Validating blog
+                var validBlog = await validateBlogInfo(blog.dataValues);
+                //Getting each blog user information 
+                var userid = validBlog.userid;
+                const userInfo = await queryUserInfo(userid);
+                validBlog.user = userInfo;
+                response.push(validBlog);
+                continue
+            }
+        }
+    }
 
-    sendResponse({"state": "success", "blogs": {"len": blogLists.length, "content": blogLists}}, resp);
+    const message = {state: "success", length: response.length, blogs: response};
+    sendResponse(message, resp);
 });
 
 router.post("/magicLink", async (req, resp) => {
-    const { token } = req.body;
+    //Getting and converting token to string
+    const { token }  = req.body;
+
     //Validating user input 
-    if(token == undefined || (typeof token != "string")){
-        var message = {state: "failed", message: "Token not found"};
-        sendResponse(message, resp);
-        return
-    }
-    //Checking if token is exist 
-    const isTokenExist = await blogsTB.findOne({
+    if(await isUndefined(resp, token) || await validateType(resp, "string", token) == false) return;
+
+    //Checking if token exists 
+    const tokenInfo = await blogsTB.findOne({
         where: {
             blog_magicToken: token
         }
     });
 
-    if(isTokenExist){
-        //Checking token expire date
-        const tokenExpireDate = isTokenExist.dataValues.magicToken_exp;
+    if(tokenInfo){
+        //Checking token expiration date
+        const tokenExpireDate = tokenInfo.dataValues.magicToken_exp;
         const nowTime = Date.now();
-        const tokenExpired = tokenExpireDate < nowTime; //If right now time is greater than  token exp date, it means token has expired
+
+        //If time of right now is greater than token exp date, it means token has expired
+        const tokenExpired = nowTime > tokenExpireDate;
         if(tokenExpired){
             const message = {state: "failed", message: "Token has expired"};
             sendResponse(message, resp);
             return
-        }else{
-            //If token is valid, we show blog info
-            const getBlog = await blogsTB.findOne({
-                where: {
-                    blog_magicToken: token
-                }
-            })
-            //Checking if something has backed from database
-            if(!getBlog){
-                sendResponse({"state": "failed", "message": "Blog Not found"}, resp);
-                return
-            }
+        }
 
-            //Checking blog Info
-            var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
-            var blog = checkBlogInfo(getBlog.dataValues, keysToExtractFromBlog);
-            //getting the user of blog information
-            var blogUserId = blog.userid;
-            const blogUserInfo = await usersTB.findOne({
-                where: {
-                    userid: blogUserId
-                }
-            })
-            var blogUserDataObj = {
-                userid: blogUserInfo.dataValues.userid,
-                username: blogUserInfo.dataValues.username,
-                profilePic: blogUserInfo.dataValues.profilePic
-            };
+        //If token is valid, we show blog info
+        const getBlog = await blogsTB.findOne({
+            where: {
+                blog_magicToken: token
+            }
+        });
         
-            blog.user = blogUserDataObj;
-            const data = {state: "success", content: blog};
-            sendResponse(data, resp);
+        //Checking if something has backed from database
+        if(!getBlog){
+            const message = {state: "failed", message: "Blog Not found"};
+            sendResponse(message, resp);
             return
         }
+
+        //Checking blog Info
+        var blog = await validateBlogInfo(getBlog.dataValues);
+
+        //Quering user information of blog
+        var blogUserId = blog.userid;
+        blog.user = await queryUserInfo(blogUserId);
+        const data = {state: "success", content: blog};
+        sendResponse(data, resp);
+        return
+        
     }else{
+        //Sending error if token not found
         const message = {state: "failed", message: "Blog not found"};
         sendResponse(message, resp);
         return
@@ -105,78 +155,40 @@ router.post("/magicLink", async (req, resp) => {
 
 router.get("/:blogId", async (req, resp) => {
     var { blogId } = req.params;
-    if(!validateUserInputAsNumber(blogId)){
-        sendResponse({"state": "failed", "message": "Not found"}, resp);
+
+    //Validating blog id to be numver
+    if(!await validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Not found"}
+        sendResponse(message, resp);
         return
     };
-    const getBlog = await blogsTB.findOne({
+
+    //Quering blog info
+    const blog = await blogsTB.findOne({
         where: {
             blog_id: blogId,
             is_public: 1
         }
-    })
+    });
+
     //Checking if something has backed from database
-    if(!getBlog){
-        sendResponse({"state": "failed", "message": "Not found"}, resp);
+    if(!blog){
+        const message = {state: "failed", message: "Not found"};
+        sendResponse(message, resp);
         return
     }
 
     //Checking blog Info
-    var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
-    var blog = checkBlogInfo(getBlog.dataValues, keysToExtractFromBlog);
+    var validatedBlog = await validateBlogInfo(blog.dataValues);
+
     //getting the user information of blog 
-    var blogUserId = blog.userid;
-    const blogUserInfo = await usersTB.findOne({
-        where: {
-            userid: blogUserId
-        }
-    })
-    var blogUserDataObj = {
-        userid: blogUserInfo.dataValues.userid,
-        username: blogUserInfo.dataValues.username,
-        profilePic: blogUserInfo.dataValues.profilePic
-    };
+    var blogUserId = validatedBlog.userid;
+    validatedBlog.user = await queryUserInfo(blogUserId);
 
-    blog.user = blogUserDataObj;
-    //Trying to get the user's liked and saved blogs to see if user has liked or saved this post or not, if user is loggin
-    try {
-        var user = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-        const userLikes = await usersTB.findAll({
-            attributes: ["likedPosts"],
-            where: {
-                userid: user.id
-            }
-        })
-        const userSaveds = await usersTB.findAll({
-            attributes: ["savedPosts"],
-            where: {
-                userid: user.id
-            }
-        })
-        const likesData = userLikes[0].dataValues.likedPosts;
-        const likes = likesData.split(",");
-        const savesData = userSaveds[0].dataValues.savedPosts;
-        const saves = savesData.split(",");
-        
-        if(likes.includes(blogId)){
-            blog.isLiked = true;
-        }
-        if(saves.includes(blogId)){
-            blog.isSaved = true
-        }
-        sendResponse({"state": "success", "content": blog}, resp);
-    //if above block code goes into error, it means user is not loggin, then we just show the post without isLiked or isSaved
-    } catch (error) {
-        if(blog){
-            sendResponse({"state": "success", "content": blog}, resp);
-            return
-        }else{
-            const data = {"state": "failed", "message": "Not found"};
-            sendResponse(data, resp);
-        }
-    }
-})
-
+    const message = {state: "success", content: validatedBlog};
+    sendResponse(message, resp);
+    return
+});
 
 router.get("/:blogId/comments", async (req, resp) => {
     var data = {state: "success", comments: []};
@@ -184,20 +196,12 @@ router.get("/:blogId/comments", async (req, resp) => {
     var { limit } = req.query;
     var { offset } = req.query;
 
-    if(!validateUserInputAsNumber(blogId)){
-        sendResponse({state: "failed", message: "Blog not found"}, resp);
-        return
-    }
-
     //Validating limit and offset value
-    if(!limit || !offset){
-        const message = {state: "failed", message: "Invalid limit or offset value"};
-        sendResponse(message, resp);
-        return
-    }
+    if(await isUndefined(resp, limit, offset)) return;
 
-    if(!validateUserInputAsNumber(limit) || !validateUserInputAsNumber(offset)){
-        const message = {state: "failed", message: "Invalid limit or offset value"};
+    //Validating user input as number
+    if(!await validateUserInputAsNumber(limit, offset, blogId)){
+        const message = {state: "failed", message: "Invalid inputs"};
         sendResponse(message, resp);
         return
     }
@@ -213,9 +217,10 @@ router.get("/:blogId/comments", async (req, resp) => {
             isCommentOff: 0,
             is_public: 1
         }
-    })
+    });
 
     if(areCommentsOn){
+        //Quering for comments
         const comments = await commentsTB.findAll({
             where: {
                 blog_id: blogId
@@ -227,58 +232,34 @@ router.get("/:blogId/comments", async (req, resp) => {
            offset: offset
         });
 
+        //Quering for all commenst to get their count - we need it in front
         const getAllCommentsLen = await commentsTB.findAll({
             where: {
                 blog_id: blogId
             }
         });
+
         //Giving all comments count, we need it in frontend
         data.allCommentsLen = getAllCommentsLen.length;
         
-        const preparingComments = async () => {
-            for(index in comments){
-                var commentData = {};
-                commentData.comment = comments[index].dataValues.comment_text;
-                commentData.Id = comments[index].dataValues.commentId;
-                commentData.likes = comments[index].dataValues.commentLikes;
-                var commentedUserId = comments[index].dataValues.userid;
-                commentData.date = comments[index].dataValues.commentedAt;
-                commentData.userid = comments[index].dataValues.userid;
-                const commentedUserInfo = await usersTB.findOne({
-                    attributes: ["profilePic", "username"],
-                    where: {
-                        userid: commentedUserId
-                    }
-                })
-                commentData.username = commentedUserInfo.dataValues.username;
-                commentData.profilePic = commentedUserInfo.dataValues.profilePic;
-                //Checking if user has liked the comment, if is loggin
-                try {                   
-                    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);                  
-                    const getUserLikedComments = await usersTB.findOne({
-                        where: {
-                            userid: userInfo.id
-                        },
-                        attributes: ["likedComments"]
-                    })
-                    var likedComments = getUserLikedComments.dataValues.likedComments;
-                    var commentsId = likedComments.split(",");
-                    if(commentsId.includes(comments[index].dataValues.commentId.toString())){
-                        commentData.isLiked = true;
-                    }else{
-                        commentData.isLiked = false;
-                    }
-
-                } catch (error) {
-                   null
-                }
-                data.comments.push(commentData);
-            }
+        //Preparing comments to be sent
+        for(let comment of comments){
+            var commentData = {};
+            commentData.comment = comment.comment_text;
+            commentData.Id = comment.commentId;
+            commentData.likes = comment.commentLikes;
+            commentData.date = comment.commentedAt;
+            
+            //Quering the user info of comment
+            commentData.user = await queryUserInfo(comment.userid);
+            data.comments.push(commentData);
         }
-        await preparingComments();
+        
         sendResponse(data, resp);
     }else{
-        sendResponse({state: "failed", message: "Not found"}, resp);
+        const message = {state: "failed", message: "Not found"};
+        sendResponse(message, resp);
+        return
     }
 });
 
@@ -286,13 +267,9 @@ router.get("/:blogId/comments/:commentId", async (req, resp) => {
     const { commentId } = req.params;
     const { blogId } = req.params;
     
-    if(!validateUserInputAsNumber(commentId)){
+    //Checking user inputs
+    if(!await validateUserInputAsNumber(commentId, blogId)){
         const message = {state: "failed", message: "Comment not found"};
-        sendResponse(message, resp);
-        return
-    }
-    if(!validateUserInputAsNumber(blogId)){
-        const message = {state: "failed", message: "Blog not found"};
         sendResponse(message, resp);
         return
     }
@@ -307,15 +284,16 @@ router.get("/:blogId/comments/:commentId", async (req, resp) => {
     });
 
     if(areCommentsOn){
-        const getComment = await commentsTB.findOne({
+        //Quering comment
+        const comment = await commentsTB.findOne({
             where: {
                 commentId: commentId,
                 blog_id: blogId
             }
         });
 
-        if(getComment){
-            const commentInfo = getComment.dataValues;
+        if(comment){
+            const commentInfo = comment.dataValues;
             const message = {state: "success", comment: commentInfo};
             sendResponse(message, resp);
         }else{
@@ -323,6 +301,6 @@ router.get("/:blogId/comments/:commentId", async (req, resp) => {
             sendResponse(message, resp);
         }
     }
-})
+});
 
 module.exports = router;

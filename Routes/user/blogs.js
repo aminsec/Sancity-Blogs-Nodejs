@@ -5,181 +5,124 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber } = require("../../utils/functions");
-const { sendResponse } = require("../../utils/functions");
-const { createNotification } = require("../../utils/functions");
+const { validateUserInputAsNumber, validateBlogInfo, validateBlogValues } = require("../../utils/validate");
+const { sendResponse, createNotification } = require("../../utils/opt");
 
-router.get("/", (req, resp) => {
-    var blogs = []
-    const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    blogsTB.findAll({
+router.get("/", async (req, resp) => {
+    var blogs = [];
+    const { userInfo } = req;
+
+    //Quering all user blogs
+    const userBlogs = await blogsTB.findAll({
         where: {
-            userid: token.id
+            userid: userInfo.id
         }
-    }).then(res => {
-        for(var i = 0; i < res.length; i++){
-            blogs.push(res[i].dataValues)
-        }
-        const data = {"state": "success", user: {username: token.username, profilePic: token.profilePic, userid: token.id}, data: blogs};
-        sendResponse(data, resp);
-        return
-    }).catch(() => {
-        const data = {"message": "Couldn't get blogs", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    })
+    });
+
+    //Validating blogs info
+    for(let blog of userBlogs){
+        const validatedBlog = await validateBlogInfo(blog.dataValues);
+        blogs.push(validatedBlog);
+    }
+
+    const message = {state: "success", blogs: blogs};
+    sendResponse(message, resp);
 });
 
 router.post("/new", async (req, resp) => {
+    const { userInfo } = req;
     var { bannerPic, title, body, tags, option} = req.body;
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
 
-    if(title === undefined || body === undefined || tags === undefined || option === undefined || bannerPic === undefined){
-        const data = {"message": "All fields required", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    if(title == "" || body == ""){
-        const data = {"message": "Fields can not be empty", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    if(!option.hasOwnProperty("is_public") || !option.hasOwnProperty("commentsOff") || !option.hasOwnProperty("showLikes")){
-        const data = {"message": "Invalid options", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-    
-    if(typeof option.is_public !== "boolean" || typeof option.commentsOff !== "boolean" || typeof option.showLikes !== "boolean"){
-        const data = {"message": "Invalid options input", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    //Preventing DOS
-    if(tags.length > 255){
-        sendResponse({state: "failed", message: "Tags are too long"}, resp);
-        return
-    }
-
-    if(tags != ""){
-        if(tags[0] != "#"){
-            const data = {"message": "Tags must start with '#'", "state": "failed"};
-
-            sendResponse(data, resp);
-
-            return
-        }
-        var tagsValue = tags.split("#");
-        tagsValue.splice(0, 1);
-        var validTagRegex = new RegExp("^[a-zA-Z0-9]+$");
-        for(var i = 0; i < tagsValue.length; i++){
-            if(!tagsValue[i].match(validTagRegex)){
-                const data = {"message": "Just numbers and characters are allowed as tag", "state": "failed"};
-                sendResponse(data, resp);
-                return
-            }
-        }
-    }
-
-    if(body.length < 100){
-        const data = {"message": "Body must be at least 100 character", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    if(bannerPic){
-        const base64Data = bannerPic.replace(/^data:image\/png;base64,/, "");
-        const buffer = Buffer.from(base64Data, 'base64');
-        let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex")
-        var blog_image = "/api/v1/profilePics/" + randomFileName;
-        const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
-        fs.writeFile(filePath, buffer, (err) => {
-            if (err) {
-                console.log(err);
-            }
-        });
-    }
+    //Validating blog values before inserting
+    const checkResult = await validateBlogValues(bannerPic, title, body, tags, option, resp);
+    if(checkResult == false) return;
 
     //Getting blog created time
     var createdTime = Date.now().toString();
 
     try {
-        const insertBlog = await blogsTB.create({
+        await blogsTB.create({
             userid: userInfo.id,
             blog_content: body, 
-            blog_image: blog_image,
+            blog_image: checkResult.blog_image,
             blog_title: title,
             tags: tags,
             is_public: option.is_public,
             isCommentOff: option.commentsOff,
             showLikes: option.showLikes,
             createdAt:createdTime
-        })
-        const data = {"message": "Blog added successfully", "state": "success"};
+        });
+        const data = {message: "Blog added successfully", state: "success"};
         sendResponse(data, resp);
         return
     } catch (error) {
-        const data = {"message": "Couldn't add blog", "state": "failed"};
+        const data = {message: "Couldn't add blog", state: "failed"};
         sendResponse(data, resp);
         return
     }
 });
 
+router.get("/liked-blogs", async (req, resp) => {
+    const { userInfo } = req;
+
+    //Quering liked blogs
+    const likedBlogs = await usersTB.findOne({
+        attributes: ["likedPosts"],
+        where: {
+            userid: userInfo.id
+        }
+    });
+
+    var likedBlogsList = likedBlogs.dataValues.likedPosts.split(",");
+    const message = {state: "success", liked_blogs: likedBlogsList};
+    sendResponse(message, resp);
+});
+
+router.get("/saved-blogs", async (req, resp) => {
+    const { userInfo } = req;
+
+    //Quering liked blogs
+    const likedBlogs = await usersTB.findOne({
+        attributes: ["savedPosts"],
+        where: {
+            userid: userInfo.id
+        }
+    });
+
+    var likedBlogsList = likedBlogs.dataValues.savedPosts.split(",");
+    const message = {state: "success", saved_blogs: likedBlogsList};
+    sendResponse(message, resp);
+});
+
 router.get("/:blogId", async (req, resp) => {
     var { blogId } = req.params;
-    const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
+
     //Checking if the blogId is number
-    if(!validateUserInputAsNumber(blogId)){
-        sendResponse({"state": "failed", "message": "Not found"}, resp);
+    if(!await validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 
+    //Quering blog 
     const blog = await blogsTB.findOne({
         where: {
             blog_id: blogId,
-            userid: token.id
+            userid: userInfo.id
         }
     })
     
-    if(blog !== null){
-        //Getting the user liked posts to see if the user has liked this post
-        const userLikes = await usersTB.findAll({
-            attributes: ["likedPosts"],
-            where: {
-                userid: token.id
-            }
-        })
-     
-        const likesData = userLikes[0].dataValues.likedPosts;
-        const likes = likesData.split(",");
-        if(likes.includes(blogId.toString())){
-           blog.dataValues.isLiked = true
-        }
-
-        const userSaveds = await usersTB.findAll({
-            attributes: ["savedPosts"],
-            where: {
-                userid: token.id
-            }
-        })
-        const savesData = userSaveds[0].dataValues.savedPosts;
-        const saves = savesData.split(",");
-        if(saves.includes(blogId.toString())){
-            blog.dataValues.isSaved = true
-        }
-
-        const data = {"state": "success", "user": {username: token.username, profilePic: token.profilePic, userid: token.id}, "data": blog.dataValues};
-        sendResponse(data, resp);
+    if(blog){
+        const message = {state: "success", blog: blog};
+        sendResponse(message, resp);
         return
     }else{
-        const data = {"state": "failed", "message": "Not found"};
-        sendResponse(data, resp);
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
-})
+});
 
 //Deleting blogs
 router.delete("/:blogId", async (req, resp) => {
@@ -207,7 +150,7 @@ router.delete("/:blogId", async (req, resp) => {
     sendResponse(data, resp)
    }
 
-})
+});
 
 router.get("/:blogId/like", async (req, resp) => {
     var { blogId } = req.params;

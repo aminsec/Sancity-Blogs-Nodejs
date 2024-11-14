@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { sendResponse } = require("../../utils/functions");
-const { validateUserInputAsNumber } = require("../../utils/functions");
+const { sendResponse } = require("../../utils/opt");
+const { validateUserInputAsNumber } = require("../../utils/validate");
 const { messagesTB } =  require("../../database");
 
 router.get("/:contact", async (req, resp) => {

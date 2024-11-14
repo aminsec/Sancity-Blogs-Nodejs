@@ -5,8 +5,8 @@ const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB } = require("../../database");
-const { sendResponse } = require("../../utils/functions");
-const { checkBlogInfo } = require("../../utils/functions");
+const { sendResponse } = require("../../utils/opt");
+const { validateBlogInfo } = require("../../utils/validate");
 
 router.get("/info", async(req, resp) => {
     const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
@@ -283,8 +283,7 @@ router.get("/favorites", async (req, resp) => {
                 continue
             }
 
-            var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
-            var blogData = checkBlogInfo(getBlogData.dataValues, keysToExtractFromBlog);
+            var blogData = await validateBlogInfo(getBlogData.dataValues);
             const userBLogData = await usersTB.findOne({
                 where: {
                     userid: blogData.userid
