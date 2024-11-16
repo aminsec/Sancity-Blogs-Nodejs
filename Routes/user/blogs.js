@@ -6,7 +6,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber, validateBlogInfo, validateBlogValues } = require("../../utils/validate");
-const { sendResponse, createNotification } = require("../../utils/opt");
+const { sendResponse, createNotification, removeItemFromArray } = require("../../utils/opt");
 
 router.get("/", async (req, resp) => {
     var blogs = [];
@@ -98,13 +98,6 @@ router.get("/:blogId", async (req, resp) => {
     var { blogId } = req.params;
     const { userInfo } = req;
 
-    //Checking if the blogId is number
-    if(!await validateUserInputAsNumber(blogId)){
-        const message = {state: "failed", message: "Blog not found"};
-        sendResponse(message, resp, {}, 404);
-        return
-    }
-
     //Quering blog 
     const blog = await blogsTB.findOne({
         where: {
@@ -127,74 +120,75 @@ router.get("/:blogId", async (req, resp) => {
 //Deleting blogs
 router.delete("/:blogId", async (req, resp) => {
     const { blogId } = req.params;
-    const isValidBlogNumber = validateUserInputAsNumber(blogId)
-    if(!isValidBlogNumber){
-        const data = {"state": "failed", "message": "Invalid blog number"};
-        sendResponse(data, resp);
+    const { userInfo } = req;
+
+    //Validating user input
+    if(! await validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Invalid blog number"};
+        sendResponse(message, resp, {}, 400);
         return
     }
-
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    
     const deletBlog = await blogsTB.destroy({
         where: {
             blog_id: blogId,
             userid: userInfo.id
         }
-    })
+    });
 
    if(deletBlog){
-        const data = {"state": "success", "message": "Blog deleted successfully"}
-        sendResponse(data, resp)
+        const message = {state: "success", message: "Blog deleted successfully"};
+        sendResponse(message, resp);
+        return
    }else{
-    const data = {"state": "failed", "message": "Couldn't delete blog"}
-    sendResponse(data, resp)
+    const message = {state: "failed", message: "Couldn't delete blog"};
+    sendResponse(message, resp);
    }
-
 });
 
 router.get("/:blogId/like", async (req, resp) => {
     var { blogId } = req.params;
-    var user = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    const checkBlogAccessble = await blogsTB.findOne({
+    var { userInfo } = req;
+
+    //Checking blog is accessible 
+    const blogData = await blogsTB.findOne({
         where: {
             blog_id: blogId,
             is_public: 1
         }
     });
-    if(checkBlogAccessble == null){
-        sendResponse({"state": "failed", "message": "Couldn't like blog"}, resp);
+
+    if(blogData == null){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 
-    //Getting user liked posts. If user already liked the posts, we decrease, else we increase the likes
-    const userLikedPosts = await usersTB.findAll({
+    //Getting user liked blogs. If user already liked the blog, we decrease, otherwise we increase the likes
+    const userLikedPosts = await usersTB.findOne({
         attributes: ["likedPosts"],
         where: {
-            userid: user.id
+            userid: userInfo.id
         }
-    })
-    var likedPosts = userLikedPosts[0].dataValues.likedPosts
-    var likedPostsLists = likedPosts.split(",")
-    //Checking if user has liked the current post
+    });
+
+    var likedPosts = userLikedPosts.dataValues.likedPosts;
+    var likedPostsLists = likedPosts.split(",");
+    
+    //Checking if user has liked the current blog
     if(likedPostsLists.includes(blogId)){
-        //If user has liked the current post, it means user wants to dislike it, so we remove the blog id from user's likedPosts list
-        var newLikedPostsList = []
-        for(var i = 0; i < likedPostsLists.length; i++){
-            if(likedPostsLists[i] == blogId){
-                continue
-            }else{
-                newLikedPostsList.push(likedPostsLists[i])
-            }
-        }
-        //updating user's liked posts list 
+        //If user has liked the current blog, it means user wants to dislike it, so we remove the blog id from user's likedPosts list
+        var newLikedPostsList = await removeItemFromArray(likedPostsLists, blogId);
+
+        //updating user liked posts list 
         var updatedLikedPostsList = newLikedPostsList.join(",");
         const disliked = await usersTB.update({
             likedPosts: updatedLikedPostsList,
-            }, {
-                where: {
-                    userid: user.id
-                }
-            })
+        }, {
+            where: {
+                userid: userInfo.id
+            }
+        });
 
         if(disliked){
             //getting current blog's likes 
@@ -202,30 +196,39 @@ router.get("/:blogId/like", async (req, resp) => {
                 where: {
                     blog_id: blogId
                 }
-            })
-            const blogLikes = blogInfo.dataValues.likes;
+            });
+            var blogLikes = blogInfo.dataValues.likes;
+            blogLikes =- 1;
+
             //Updating blog's likes - 1
             const decreaseLike = await blogsTB.update({
-                likes: blogLikes - 1
+                likes: blogLikes
             },
             {
                 where: {
                     blog_id: blogId
                 }
-            })
+            });
+
             if(decreaseLike){
-                sendResponse({"state": "success", "message": "Blog disliked successfully"}, resp)
+                const message = {state: "success", message: "Blog disliked successfully"};
+                sendResponse(message, resp);
+                return
             }else{
-                sendResponse({"state": "failed", "message": "Coulndn't dislike blog"}, resp)
+                const message = {state: "failed", message: "Coulndn't dislike blog"};
+                sendResponse(message, resp, {}, 500);
+                return
             }
             
         }else{
-            sendResponse({"state": "failed", "message": "Coulndn't dislike blog"}, resp)
+            const message = {state: "failed", message: "Coulndn't dislike blog"};
+            sendResponse(message, resp, {}, 500);
+            return
         }
-
+    
+    //If user has not liked the blog, we reduce the blog likes
     }else{
-
-        likedPostsLists.push(blogId)
+        likedPostsLists.push(blogId);
         var updatedLikedPostsList = likedPostsLists.join(",");
         const liked = await usersTB.update(
             {
@@ -233,47 +236,57 @@ router.get("/:blogId/like", async (req, resp) => {
             }, 
             {
                 where: {
-                    userid: user.id
+                    userid: userInfo.id
                 }
-            }
-        )
+            });
+            
         if(liked){
             //getting current blog's likes 
             const blogInfo = await blogsTB.findOne({
                 where: {
                     blog_id: blogId
                 }
-            })
-            const blogLikes = blogInfo.dataValues.likes;
+            });
+
+            var blogLikes = blogInfo.dataValues.likes;
+            blogLikes =+ 1;
+
+            //Updating likes
             const increaseLikes = await blogsTB.update({
-                likes: blogLikes + 1
+                likes: blogLikes
             },
             {
                 where: {
                     blog_id: blogId
                 }
-            })
+            });
+
             if(increaseLikes){
-                sendResponse({"state": "success", "message": "Blog liked successfully"}, resp);
-                //Sending notification to user
+                const message = {state: "success", message: "Blog liked successfully"};
+                sendResponse(message, resp);
+
+                //Sending notification to blog owner
                 const notifInfo = {
-                    userid: checkBlogAccessble.dataValues.userid,
-                    notif_title: `${user.username} liked your blog`,
-                    acted_userid: user.id,
+                    userid: blogData.dataValues.userid,
+                    notif_title: `${userInfo.username} liked your blog`,
+                    acted_userid: userInfo.id,
                     action_name: "liked_blog",
-                    blog_id: checkBlogAccessble.dataValues.blog_id
-                }
-                if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
+                    blog_id: blogData.dataValues.blog_id
+                };
+
+                // preventing users sending notifications to theirselves
+                if(notifInfo.userid !== notifInfo.acted_userid){ 
                     createNotification(notifInfo);
                     return
                 }
             }
         }else{
-            sendResponse({"state": "failed", "message": "Coulndn't like blog"}, resp)
+            const message = {state: "failed", message: "Coulndn't like blog"};
+            sendResponse(message, resp, {}, 500);
+            return
         }
     }
-
-})
+});
 
 router.get("/:blogId/save", async (req, resp) => {
     var { blogId } = req.params;
