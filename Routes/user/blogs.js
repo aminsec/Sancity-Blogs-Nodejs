@@ -290,72 +290,75 @@ router.get("/:blogId/like", async (req, resp) => {
 
 router.get("/:blogId/save", async (req, resp) => {
     var { blogId } = req.params;
-    var user = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    const checkBlogAccessble = await blogsTB.findOne({
+    var { userInfo } = req;
+    
+    //Checking blog is accessible
+    const blogData = await blogsTB.findOne({
         where: {
-            blog_id: blogId
+            blog_id: blogId,
+            is_public: 1
         }
-    })
-    if(checkBlogAccessble == null){
-        sendResponse({"state": "failed", "message": "Couldn't save blog"}, resp);
+    });
+
+    if(blogData == null){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp);
         return
     }
-    var blogInfo = checkBlogAccessble.dataValues;
-    //Preventing user to do not save the blogs that are private by other users
-    if(blogInfo.userid !== user.id && blogInfo.is_public == 0){
-        sendResponse({"state": "failed", "message": "Couldn't save blog"}, resp);
-        return
-    }else{
-        //Getting user saved posts. If user already saved the posts, we remove it, else we add it to the list
-        const userSavedPosts = await usersTB.findAll({
-            attributes: ["savedPosts"],
+
+    var blogInfo = blogData.dataValues;
+
+    //Getting user saved blogs. If user already saved the posts, we remove it, otherwise we add it to the list
+    const userSavedPosts = await usersTB.findOne({
+        attributes: ["savedPosts"],
+        where: {
+            userid: userInfo.id
+        }
+    });
+
+    var savedPosts = userSavedPosts.dataValues.savedPosts;
+    var savedPostsLists = savedPosts.split(",");
+    if(savedPostsLists.includes(blogId)){
+        //If user has saved the current post, it means user wants to unsave it, so we remove the blogid from user saved list
+        var newSavedPostsList = await removeItemFromArray(savedPostsLists, blogId);
+        var updatedSavedPostsList = newSavedPostsList.join(",");
+        const unsaved = await usersTB.update({
+            savedPosts: updatedSavedPostsList,
+        }, {
             where: {
-                userid: user.id
+                userid: userInfo.id
             }
-        })
-        var savedPosts = userSavedPosts[0].dataValues.savedPosts
-        var savedPostsLists = savedPosts.split(",")
-        if(savedPostsLists.includes(blogId)){
-            //If user has saved the current post, it means user wants to unsave it, so we remove the blogid from user's saved list
-            var newSavedPostsList = []
-            for(var i = 0; i < savedPostsLists.length; i++){
-                if(savedPostsLists[i] == blogId){
-                    continue
-                }else{
-                    newSavedPostsList.push(savedPostsLists[i])
-                }
-            }
-            var updatedSavedPostsList = newSavedPostsList.join(",");
-            const unsaved = await usersTB.update({
-                savedPosts: updatedSavedPostsList,
-                }, {
-                    where: {
-                        userid: user.id
-                    }
-                })
-            if(unsaved){
-                sendResponse({"state": "success", "message": "Blog unsaved"}, resp)
-            }else{
-                sendResponse({"state": "failed", "message": "Couldn't unsave blog"}, resp)
-            }
+        });
+
+        if(unsaved){
+            const message = {state: "success", message: "Blog unsaved successfully"};
+            sendResponse(message, resp);
+            return
         }else{
-            savedPostsLists.push(blogId);
-            var updatedSavedPostsList = savedPostsLists.join(",");
-            const saved = await usersTB.update(
-                {
-                    savedPosts: updatedSavedPostsList,
-                }, 
-                {
-                    where: {
-                        userid: user.id
-                    }
-                }
-            )
-            if(saved){
-                sendResponse({"state": "success", "message": "Blog saved successfully"}, resp);
-            }else{
-                sendResponse({"state": "failed", "message": "Couldn't save blog"}, resp);
+            const message = {state: "failed", message: "Couldn't unsave blog"};
+            sendResponse(message, resp, {}, 500);
+            return
+        }
+
+    }else{
+        //If user has not saved the blog, we add the blogId to their list
+        savedPostsLists.push(blogId);
+        var updatedSavedPostsList = savedPostsLists.join(",");
+        const saved = await usersTB.update({
+            savedPosts: updatedSavedPostsList,
+        }, 
+        {
+            where: {
+                userid: userInfo.id
             }
+        });
+
+        if(saved){
+            const message = {state: "success", message: "Blog saved successfully"};
+            sendResponse(message, resp);
+        }else{
+            const message = {state: "failed", message: "Couldn't save blog"};
+            sendResponse(message, resp, {}, 500);
         }
     }
 });
