@@ -195,11 +195,44 @@ async function validateUsername(username, resp){
     return true
 };
 
+async function validateCommentValues(comment, resp){
+    //This regex matches only spaces 
+    var invalidInputRegex = new RegExp("^\\s+$");
+
+    //Validating comment content
+    if(comment == undefined){
+        const message = {state: "failed", message: "comment parameter required"};
+        sendResponse(message, resp, {}, 404);
+        return false;
+    }
+
+    if(comment == ""){
+        const message = {state: "failed", message: "Leave a valid comment"};
+        sendResponse(message, resp, {}, 404);
+        return false;
+    }
+    
+    if(comment.match(invalidInputRegex)){
+        const message = {state: "failed", message: "Leave a valid comment"};
+        sendResponse(message, resp, {}, 404);
+        return false;
+    }
+
+    if(comment.length > 276){
+        const message = {state: "failed", message: "Comment is too long"};
+        sendResponse(message, resp, {}, 404);
+        return false;
+    }
+
+    return true;
+}
+
 module.exports = {
     validateUserInputAsNumber,
+    validateCommentValues,
     validateBlogValues,
-    validateBlogInfo,
     validateUsername,
+    validateBlogInfo,
     validateType,
     validateWST,
     validateWSM,

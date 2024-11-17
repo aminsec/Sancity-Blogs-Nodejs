@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber } = require("../../utils/validate");
+const { validateUserInputAsNumber, validateCommentValues } = require("../../utils/validate");
 const { removeItemFromArray, createNotification, sendResponse } = require("../../utils/opt");
 
 router.get("/liked-comments", async (req, resp) => {
@@ -23,48 +23,35 @@ router.get("/liked-comments", async (req, resp) => {
 
 router.post("/:blogId/addComment", async (req, resp) => {
     var { blogId } = req.params;
-    if(!validateUserInputAsNumber(blogId)){
-        sendResponse({state: "failed", message: "Invalid blog Id"}, resp);
-        return
-    }
     var { comment } = req.body;
-    var userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    var invalidInputRegex = new RegExp("^\\s+$");
+    var { userInfo } = req;
 
-    //Validation comment content
-    if(comment == undefined){
-        sendResponse({state: "failed", message: "comment parameter required"}, resp);
-        return
-    }
-    if(comment == ""){
-        sendResponse({state: "failed", message: "Leave a valid comment"}, resp);
-        return
-    }
-    
-    if(comment.match(invalidInputRegex)){
-        sendResponse({state: "failed", message: "Leave a valid comment"}, resp);
-        return
-    }
-
-    if(comment.length > 276){
-        sendResponse({state: "failed", message: "Comment is too long"}, resp);
+    if(! await validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Invalid blog Id"};
+        sendResponse(message, resp, {}, 400);
         return
     }
 
     //Checking blog is public and commentable 
-    const isPublic = await blogsTB.findOne({
+    const blog = await blogsTB.findOne({
         where: {
             blog_id: blogId,
             is_public: 1,
             isCommentOff: 0
         }
-    })
+    });
+
     //Return if blog is not found or is not public or comments are off
-    if(isPublic == null){
-        sendResponse({state: "failed", message: "Blog not found"}, resp);
+    if(blog == null){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
-    
+
+    //Validating comment content
+    const validatedComment = await validateCommentValues(comment, resp);
+    if(!validatedComment) return;
+
     //Getting comment time 
     var createdTime = Date.now().toString();
 
@@ -73,25 +60,27 @@ router.post("/:blogId/addComment", async (req, resp) => {
         comment_text: comment,
         commentedAt: createdTime,
         userid: userInfo.id
-    })
+    });
 
     if(addComment){
-        sendResponse({state: "success", message: "Comment added successfully"}, resp);
+        const message = {state: "success", message: "Comment added successfully"};
+        sendResponse(message, resp);
+
         //Sending notification to user
         const notifInfo = {
-            userid: isPublic.dataValues.userid,
+            userid: blog.dataValues.userid,
             notif_title: `${userInfo.username} commented on your blog`,
             acted_userid: userInfo.id,
             action_name: "commented_blog",
-            blog_id: isPublic.dataValues.blog_id,
+            blog_id: blog.dataValues.blog_id,
             comment_id: addComment.dataValues.commentId,
 
-        }
+        };
+
         if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
             createNotification(notifInfo);
             return
         }
-
     }
 });
 
