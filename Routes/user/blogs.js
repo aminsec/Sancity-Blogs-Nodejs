@@ -1,9 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs');
-const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber, validateBlogInfo, validateBlogValues } = require("../../utils/validate");
 const { sendResponse, createNotification, removeItemFromArray } = require("../../utils/opt");
@@ -471,6 +468,6 @@ router.post("/:blogId/magicLink", async (req, resp) => {
         sendResponse(message, resp, {}, 500);
         return
     } 
-})
+});
 
 module.exports = router;
