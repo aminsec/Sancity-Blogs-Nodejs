@@ -85,24 +85,27 @@ router.post("/:blogId/addComment", async (req, resp) => {
 });
 
 router.get("/:commentId/like", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
     const { commentId } = req.params;
     var messageToSend = {};
 
     //Checking user input
-    if(!validateUserInputAsNumber(commentId)){
-        sendResponse({state: "failed", message: "Invalid comment Id"}, resp);
+    if(! await validateUserInputAsNumber(commentId)){
+        const message = {state: "failed", message: "Invalid comment Id"};
+        sendResponse(message, resp);
         return
     }
 
     //Checking is comment exist or not
-    const isCommentExist = await commentsTB.findOne({
+    const comment = await commentsTB.findOne({
         where: {
             commentId: commentId
         }
-    })
-    if(!isCommentExist){
-        sendResponse({state: "failed", message: "Comment not found"}, resp);
+    });
+
+    if(!comment){
+        const message = {state: "failed", message: "Comment not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
     
@@ -112,89 +115,94 @@ router.get("/:commentId/like", async (req, resp) => {
         where: {
             userid: userInfo.id
         }
-    })
+    });
+
     if(getLikedComments){
         var likedComments = getLikedComments.dataValues.likedComments;
-        var commentsId = likedComments.split(",");
-        if(commentsId.includes(commentId)){
-            commentsId = removeItemFromArray(commentsId, commentId); //If the comment has been liked, we remove it from the list
+        var commentsIdList = likedComments.split(",");
+
+        //If user has liked comment we remove it from their list
+        if(commentsIdList.includes(commentId)){
+            commentsIdList = await removeItemFromArray(commentsIdList, commentId); 
+            
             //Decreasing the likes of comment
             const getLikesOfcomment = await commentsTB.findOne({
                 where: {
                     commentId: commentId
                 }
-            })
+            });
+
             var likesOfComment = getLikesOfcomment.dataValues.commentLikes;
             likesOfComment -= 1;
+
             //Inserting updated likes 
             const updateLikesOfComment = await commentsTB.update({
                 commentLikes: likesOfComment
-            }, 
-            {
+            }, {
                 where: {
                     commentId: commentId
                 }
-            })
+            });
+
             if(updateLikesOfComment){
                 messageToSend = {state: "success", message: "Comment disliked successfully"};
             }
             
         }else{
-            commentsId.push(commentId); //If the comment is not in the list, we add it
+            //If the comment is not in the list, we add it
+            commentsIdList.push(commentId); 
+
             //Increasing the likes of comment
             const getLikesOfcomment = await commentsTB.findOne({
                 where: {
                     commentId: commentId
                 }
-            })
+            });
+
             var likesOfComment = getLikesOfcomment.dataValues.commentLikes;
             likesOfComment += 1;
+
             //Inserting updated likes 
             const updateLikesOfComment = await commentsTB.update({
                 commentLikes: likesOfComment
-            }, 
-            {
+            }, {
                 where: {
                     commentId: commentId
                 }
-            })
+            });
+
             if(updateLikesOfComment){
                 messageToSend = {state: "success", message: "Comment liked successfully"};
                 //Sending notification to user
-                 
-                    const notifInfo = {
-                        userid: isCommentExist.dataValues.userid,
-                        notif_title: `${userInfo.username} liked your comment`,
-                        acted_userid: userInfo.id,
-                        action_name: "liked_comment",
-                        blog_id: isCommentExist.dataValues.blog_id,
-                        comment_id: isCommentExist.dataValues.commentId
-                    }
-                    if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
-                        createNotification(notifInfo);
-                    }
-                    
-                
- 
+                const notifInfo = {
+                    userid: comment.dataValues.userid,
+                    notif_title: `${userInfo.username} liked your comment`,
+                    acted_userid: userInfo.id,
+                    action_name: "liked_comment",
+                    blog_id: comment.dataValues.blog_id,
+                    comment_id: comment.dataValues.commentId
+                }
+                if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
+                    createNotification(notifInfo);
+                }
             }  
         }
         
-        var newCommentsId = commentsId.join(",");
+        var newCommentsId = commentsIdList.join(",");
         const insertNewComments = await usersTB.update({
             likedComments: newCommentsId,
-          },
-          {
+          },{
             where: {
                 userid: userInfo.id
             }
-          }
-        )
+          });
+
         if(insertNewComments){
             sendResponse(messageToSend, resp);
             return
         }
     }
-})
+});
 
 router.delete("/:commentId/delete", async (req, resp) => {
     const { commentId } = req.params;
