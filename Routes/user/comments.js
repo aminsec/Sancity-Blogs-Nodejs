@@ -201,38 +201,51 @@ router.get("/:commentId/like", async (req, resp) => {
             sendResponse(messageToSend, resp);
             return
         }
+    }else{
+        const message = {state: "failed", message: "An error accoured"};
+        sendResponse(message, resp, {}, 500);
     }
 });
 
 router.delete("/:commentId/delete", async (req, resp) => {
     const { commentId } = req.params;
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
 
     if(!validateUserInputAsNumber(commentId)){
-        sendResponse({state: "failed", message: "Comment not found"}, resp);
+        const message = {state: "failed", message: "Comment not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 
+    //Checking authorization 
     const checkIsDeletable = await commentsTB.findOne({
         where: {
             commentId: commentId,
             userid: userInfo.id
         }
     });
+
     if(checkIsDeletable){
         const deleteComment = await commentsTB.destroy({
             where: {
                 commentId: commentId,
                 userid: userInfo.id
             }
-        })
+        });
+
         if(deleteComment){
-            sendResponse({state: "success", message: "Comment deleted successfully"}, resp);
+            const message = {state: "success", message: "Comment deleted successfully"};
+            sendResponse(message, resp);
+            return
+        }else{
+            const message = {state: "failed", message: "Coulnd't delete comment"};
+            sendResponse(message, resp, {}, 500);
             return
         }
 
     }else{
-        sendResponse({state: "failed", message: "Comment not found"}, resp);
+        const message = {state: "failed", message: "Comment not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 })
