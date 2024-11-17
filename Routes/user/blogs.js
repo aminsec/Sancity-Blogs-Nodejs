@@ -34,8 +34,8 @@ router.post("/new", async (req, resp) => {
     var { bannerPic, title, body, tags, option} = req.body;
 
     //Validating blog values before inserting
-    const checkResult = await validateBlogValues(bannerPic, title, body, tags, option, resp);
-    if(checkResult == false) return;
+    const blogResult = await validateBlogValues(bannerPic, title, body, tags, option, resp);
+    if(blogResult == false) return;
 
     //Getting blog created time
     var createdTime = Date.now().toString();
@@ -44,7 +44,7 @@ router.post("/new", async (req, resp) => {
         await blogsTB.create({
             userid: userInfo.id,
             blog_content: body, 
-            blog_image: checkResult.blog_image,
+            blog_image: blogResult.blog_image,
             blog_title: title,
             tags: tags,
             is_public: option.is_public,
@@ -306,8 +306,6 @@ router.get("/:blogId/save", async (req, resp) => {
         return
     }
 
-    var blogInfo = blogData.dataValues;
-
     //Getting user saved blogs. If user already saved the posts, we remove it, otherwise we add it to the list
     const userSavedPosts = await usersTB.findOne({
         attributes: ["savedPosts"],
@@ -365,88 +363,37 @@ router.get("/:blogId/save", async (req, resp) => {
 
 router.put("/:blogId/update", async (req, resp) => {
     var { blogId } = req.params;
-    //validating user input to get only numbers
-    const isValidBlogNumber = validateUserInputAsNumber(blogId);
-    if(!isValidBlogNumber){
-        const data = {"state": "failed", "message": "Invalid blog number"};
-        sendResponse(data, resp);
-        return
-    }
+    const { userInfo } = req; 
     var { bannerPic, title, body, tags, option} = req.body;
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
 
-    if(title === undefined || body === undefined || tags === undefined || option === undefined || bannerPic === undefined){
-        const data = {"message": "All fields required", "state": "failed"};
-        sendResponse(data, resp);
+    //validating user input to get only numbers
+    if(! await validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Invalid blog number"};
+        sendResponse(message, resp, {}, 400);
         return
     }
-
-    if(title == "" || body == ""){
-        const data = {"message": "Fields can not be empty", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    if(!option.hasOwnProperty("is_public") || !option.hasOwnProperty("commentsOff") || !option.hasOwnProperty("showLikes")){
-        const data = {"message": "Invalid options", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-    
-    if(typeof option.is_public !== "boolean" || typeof option.commentsOff !== "boolean" || typeof option.showLikes !== "boolean"){
-        const data = {"message": "Invalid options input", "state": "failed"};
-        sendResponse(data, resp);
-        return
-    }
-
-    //Preventing DOS
-    if(tags.length > 255){
-        sendResponse({state: "failed", message: "Tags are too long"}, resp);
-        return
-    }
-
-    if(tags != ""){
-        if(tags[0] != "#"){
-            const data = {"message": "Tags must start with '#'", "state": "failed"};
-
-            sendResponse(data, resp);
-
-            return
+   
+    //Validating blog owner
+    const blog = await blogsTB.findOne({
+        where: {
+            blog_id: blogId,
+            userid: userInfo.id
         }
-        var tagsValue = tags.split("#");
-        tagsValue.splice(0, 1);
-        var validTagRegex = new RegExp("^[a-zA-Z0-9]+$");
-        for(var i = 0; i < tagsValue.length; i++){
-            if(!tagsValue[i].match(validTagRegex)){
-                const data = {"message": "Just numbers and characters are allowed as tag value", "state": "failed"};
-                sendResponse(data, resp);
-                return
-            }
-        }
-    }
+    });
 
-    if(body.length < 100){
-        const data = {"message": "Body must be at least 100 character", "state": "failed"};
-        sendResponse(data, resp);
+    if(!blog){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 
-    if(bannerPic){
-        const base64Data = bannerPic.replace(/^data:image\/png;base64,/, "");
-        const buffer = Buffer.from(base64Data, 'base64');
-        let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex")
-        var blog_image = "/api/v1/profilePics/" + randomFileName;
-        const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
-        fs.writeFile(filePath, buffer, (err) => {
-            if (err) {
-                console.log(err);
-            }
-        });
-    }
+    //Validating blog values before inserting
+    const blogResult = await validateBlogValues(bannerPic, title, body, tags, option, resp);
+    if(blogResult == false) return;
     
     const updateBlog = await blogsTB.update({
         blog_title: title,
-        blog_image: blog_image,
+        blog_image: blogResult.blog_image,
         blog_content: body,
         tags: tags,
         is_public: option.is_public,
@@ -459,16 +406,13 @@ router.put("/:blogId/update", async (req, resp) => {
         }
     });
 
-    if(updateBlog[0] == 1 || updateBlog[0] == 0){
-        console.log(updateBlog)
-        const data = {"message": "Blog edited successfully", "state": "success"};
-
-        sendResponse(data, resp);
+    if(updateBlog){
+        const message = {state: "success", message: "Blog edited successfully"};
+        sendResponse(message, resp);
         return
     }else{
-        console.log(updateBlog)
-        const data = {"message": "Couldn't update blog", "state": "failed"};
-        sendResponse(data, resp);
+        const message = {state: "failed", message: "Could not update blog"};
+        sendResponse(message, resp, {}, 500);
         return
     }
 });
