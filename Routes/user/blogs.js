@@ -419,11 +419,11 @@ router.put("/:blogId/update", async (req, resp) => {
 
 router.post("/:blogId/magicLink", async (req, resp) => {
     const { blogId } = req.params;
-    var userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    var { userInfo } = req;
 
     if(!validateUserInputAsNumber(blogId)){
-        var message = {state: "failed", message: "Invalid blog number"};
-        sendResponse(message, resp);
+        const message = {state: "failed", message: "Invalid blog number"};
+        sendResponse(message, resp, {}, 400);
         return
     }
 
@@ -436,17 +436,19 @@ router.post("/:blogId/magicLink", async (req, resp) => {
     });
 
     if(hasUserAccessToBlog == null){
-        var message = {state: "failed", message: "Blog not found"};
-        sendResponse(message, resp);
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 
     //Creating a unpredictable token
     const toBeHash = "|+|" + Date.now() + "|-|" + Math.random() + "|+|";
     var blogToken = crypto.createHash('md5').update(toBeHash).digest('hex');
+
     //Creating expire date for blog token
     const currentTime = new Date();
     const blogTokenEXP = new Date(currentTime.getTime() + 5 * 60 * 1000).getTime(); // Add 5 minutes in milliseconds
+
     // Inserting to database
     const addTokenToDB = await blogsTB.update({
         blog_magicToken: blogToken,
@@ -466,7 +468,7 @@ router.post("/:blogId/magicLink", async (req, resp) => {
         return
     }else{
         const message = {state: "failed", message: "Couldn't create magic link"};
-        sendResponse(message, resp);
+        sendResponse(message, resp, {}, 500);
         return
     } 
 })
