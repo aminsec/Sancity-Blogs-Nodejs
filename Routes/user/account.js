@@ -166,55 +166,58 @@ router.put("/updateInfo", async (req, resp) => {
 
 router.post("/upload", upload.single('profilePic'), async (req, resp)=> {
     const userProfilePic = "/api/v1/profilePics/" + req.file.filename;
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
     const updateProfilePic = await usersTB.update({
         profilePic: userProfilePic
     }, {
         where: {
             userid: userInfo.id
         }
-    })
+    });
+
     //setting new profile pic to user token
     userInfo.profilePic = userProfilePic;
     const token = jwt.sign(userInfo, process.env.JWT_SECRET);
     resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
     if(updateProfilePic){
-        sendResponse({state: "success", message: "Profile picture updated successfully"}, resp);
+        const message = {state: "success", message: "Profile picture updated successfully"};
+        sendResponse(message, resp);
         return
     }else{
-        sendResponse({state: "failed", message: "Couldn't update profile picture"}, resp);
+        const message = {state: "failed", message: "Coulnd't update profile picture"};
+        sendResponse(message, resp);
         return
     }
-})
+});
 
 router.put("/changePassword", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
     const { newPass, oldPass} = req.body;
-    let userNewHashPassword = crypto.createHash('md5').update(newPass).digest("hex"); //hashing the password to md5
-    let userOldHashPassword = crypto.createHash('md5').update(oldPass).digest("hex"); //hashing the password to md5
 
-    if(newPass === undefined || oldPass == undefined){
-        const data = {"message": "All fields required", "success": false};
-        sendResponse(data, resp);
-        return
-    }
+    //hashing the password to md5
+    let userNewHashPassword = crypto.createHash('md5').update(newPass).digest("hex"); 
+    let userOldHashPassword = crypto.createHash('md5').update(oldPass).digest("hex");
+
+    //Checking user inputs
+    if(await isUndefined(resp, oldPass, newPass)) return;
 
     if(newPass == "" || oldPass == ""){  
-        const data = {"message": "Passwords can not be empty", "success": false};
-        sendResponse(data, resp);
+        const message = {state: "failed", message: "Fileds can not be empty"};
+        sendResponse(message, resp);
         return
     }
 
+    //Checking user password
     const isPasswordCorrect = await usersTB.findOne({
         where: {
             username: userInfo.username,
             password: userOldHashPassword
         }
-    })
+    });
 
     if(!isPasswordCorrect){
-        const data = {"message": "Current password is incorrect", "state": "failed"};
-        sendResponse(data, resp);
+        const message = {state: "failed", message: "Current password is incorrect"};
+        sendResponse(message, resp);
         return
     }
 
@@ -224,16 +227,14 @@ router.put("/changePassword", async (req, resp) => {
         where: {
             username: userInfo.username
         }
-    })
+    });
 
     if(updatePassword){
-        const data = {"message": "Password updated successfully", "state": "success"};
-        sendResponse(data, resp);
+        const message = {state: "success", message: "Password updated successfully"};
+        sendResponse(message, resp);
         return
     }
-})
-
-
+});
 
 router.get("/favorites", async (req, resp) => {
     const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
