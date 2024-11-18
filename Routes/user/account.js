@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
-const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB } = require("../../database");
+const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB, commentsTB, messagesTB } = require("../../database");
 const { sendResponse, removeItemFromArray } = require("../../utils/opt");
 const { validateBlogInfo, isUndefined, validateUsername } = require("../../utils/validate");
 
@@ -278,61 +278,73 @@ router.get("/likes", async (req, resp) => {
 
 router.delete("/deleteAccount", async (req, resp) => {
     const { token } = req.cookies
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
     const { password, confirm_password } = req.body;
 
-    if(!password || !confirm_password){
-        const message = {state: "failed", message: "All fields required"};
-        sendResponse(message, resp);
-        return
-    }
+    //Checking user inputes
+    if(await isUndefined(resp, password, confirm_password)) return;
 
+    //Checking user account password
     const passwordHash = crypto.createHash('md5').update(password).digest('hex');
     const confirm_passwordHash = crypto.createHash('md5').update(confirm_password).digest('hex');
 
     if(passwordHash !== confirm_passwordHash){
         const message = {state: "failed", message: "Passwords does not match"};
-        sendResponse(message, resp);
+        sendResponse(message, resp, {}, 400);
         return
     }
 
     //Checking if password is correct 
     const getUserInfo = await usersTB.findOne({
-        attributes: ["password"],
+        where: {
+            userid: userInfo.id,
+            password: passwordHash
+        }
+    });
+
+    if(!getUserInfo){
+        const message = {state: "failed", message: "Incorrect password"};
+        sendResponse(message, resp, {}, 401);
+        return
+    }
+
+    //Deleting all information related to user
+    await usersTB.destroy({
         where: {
             userid: userInfo.id
         }
     });
-    if(getUserInfo){
-        const userPassword = getUserInfo.dataValues.password;
-        if(userPassword !== passwordHash){
-            const message = {state: "failed", message: "Incorrect password"};
-            sendResponse(message, resp);
-            return
+    await blogsTB.destroy({
+        where: {
+            userid: userInfo.id
         }
-    }
-
-    //Getting all tables name to delete all records with just one command
-    const allTablesName = await sequelize.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'sancity'", {type: sequelize.QueryTypes.SELECT});
-    const blackListTables = ["dead_sessions"];
-
-    const deleteAccount = async () => {
-        for(index in allTablesName){
-            const tableName = allTablesName[index].TABLE_NAME;
-            if(blackListTables.includes(tableName)){
-                continue
-            }
-            const deleteUserAccount = await sequelize.query(`delete from ${tableName} where userid = ${userInfo.id}`, {type: sequelize.QueryTypes.DELETE});
+    });
+    await commentsTB.destroy({
+        where: {
+            userid: userInfo.id
         }
-        //Deleting user notification where user's id matches with acted_userid column
-        notificationsTB.destroy({
-            where: {
-                acted_userid: userInfo.id
-            }
-        })
-
-    }
-    await deleteAccount();
+    });
+    await notificationsTB.destroy({
+        where: {
+            acted_userid: userInfo.id
+        }
+    });
+    await notificationsTB.destroy({
+        where: {
+            userid: userInfo.id
+        }
+    });
+    await messagesTB.destroy({
+        where: {
+            sender: userInfo.id
+        }
+    });
+    await messagesTB.destroy({
+        where: {
+            receiver: userInfo.id
+        }
+    });
+    
     //revoking session
     const revokeSession = await dead_sessionsTB.create({
         session: token
