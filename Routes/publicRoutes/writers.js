@@ -41,11 +41,18 @@ router.get("/:userid", async (req, resp) => {
 });
 
 
-router.get("/:username/info", async(req, resp) => {
-    const { username } = req.params; 
+router.get("/:userid/info", async(req, resp) => {
+    const { userid } = req.params; 
     const userInfo = await usersTB.findOne({
         where: {
-            username: username
+            [Op.or]: [
+                {
+                    username: userid
+                },
+                {
+                    userid: userid
+                }
+            ]
         }
     });
 
@@ -100,16 +107,18 @@ router.get("/:userid/blogs", async (req, resp) => {
 
 router.get("/:userid/liked-blogs", async (req, resp) => {
     const { userid } = req.params; 
-    if(!await validateUserInputAsNumber(userid)){
-        const message = {state: "failed", message: "User not found"};
-        sendResponse(message, resp);
-        return
-    }
 
     const likedBlogsId = await usersTB.findOne({
         attributes: ['likedPosts'],
         where: {
-            userid: userid
+            [Op.or]: [
+                {
+                    username: userid
+                },
+                {
+                    userid: userid
+                }
+            ]
         }
     });
 

@@ -5,7 +5,7 @@ const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB } = require("../../database");
-const { sendResponse } = require("../../utils/opt");
+const { sendResponse, removeItemFromArray } = require("../../utils/opt");
 const { validateBlogInfo, isUndefined, validateUsername } = require("../../utils/validate");
 
 router.get("/info", async(req, resp) => {
@@ -237,65 +237,24 @@ router.put("/changePassword", async (req, resp) => {
 });
 
 router.get("/favorites", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
+    
     //Getting user saved posts lists
     const favoriteBlogs = await usersTB.findOne({
         attributes: ["savedPosts"],
         where: {
             userid: userInfo.id
         }
-    })
+    });
+
     const blogs = favoriteBlogs.dataValues.savedPosts;
     var blogsArray = blogs.split(",");
+
     //removing 0 item from lists that is default value of savedPosts column in DB
-    const indexOfDefaultValue = blogsArray.indexOf("0");
-    if(indexOfDefaultValue > -1){
-        blogsArray.splice(indexOfDefaultValue, 1);
-    }
-    //If the list is empty, we show a null message
-    if(blogsArray.length == 0){
-        sendResponse({"state": "failed", "message": "Nothing to show"}, resp);
-        return;
-    }
-    //Getting each blog info
-    const getBlogsData = async () => {
-        var savedBlogsList = [];
-        for(var i = 0; i < blogsArray.length; i++){
-            var blogsInfo = {}
-            const getBlogData = await blogsTB.findOne({
-                where: {
-                    blog_id: blogsArray[i],
-                    is_public: 1
-                }
-            })
-            //pass if the blog is deleted
-            if(getBlogData == null){
-                continue
-            }
-
-            var blogData = await validateBlogInfo(getBlogData.dataValues);
-            const userBLogData = await usersTB.findOne({
-                where: {
-                    userid: blogData.userid
-                }
-            })
-
-            const blogUserInfo = {
-                userid: userBLogData.dataValues.userid,
-                username: userBLogData.dataValues.username, 
-                profilePic: userBLogData.dataValues.profilePic
-            }
-            blogsInfo.user = blogUserInfo;
-            blogsInfo.content = blogData;
-            savedBlogsList.push(blogsInfo)
-        
-
-        }
-        return savedBlogsList
-    }
-    var blogsContent = await getBlogsData();
-    sendResponse({state: "success", content: blogsContent}, resp);
-})
+    blogsArray = await removeItemFromArray(blogsArray, "0");
+    const message = {state: "success", blogs_id: blogsArray};
+    sendResponse(message, resp);
+});
 
 router.get("/likes", async (req, resp) => {
     const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
