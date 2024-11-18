@@ -6,7 +6,7 @@ const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB } = require("../../database");
 const { sendResponse } = require("../../utils/opt");
-const { validateBlogInfo } = require("../../utils/validate");
+const { validateBlogInfo, isUndefined, validateUsername } = require("../../utils/validate");
 
 router.get("/info", async(req, resp) => {
     const { userInfo } = req;
@@ -15,7 +15,7 @@ router.get("/info", async(req, resp) => {
             username: userInfo.username
         }
     });
-
+    console.log(userAccountInfo)
     var userData = {
         userid: userAccountInfo.dataValues.userid,
         username: userAccountInfo.dataValues.username,
@@ -32,19 +32,16 @@ router.get("/info", async(req, resp) => {
 });
 
 router.put("/updateInfo", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
     var { username, email, bio } = req.body;
     var usernameUpdated = false;
     var emailUpdated = false;
     var bioUpdated = false;
 
-    if(username == undefined || email == undefined || bio == undefined){
-        const message = {"state": "failed", "message": "All fields required"};
-        sendResponse(message, resp);
-        return
-    }
+    //Checking inputs
+    if(await isUndefined(resp, username, email, bio)) return;
 
-    //Checking for previes data to prevent temp query to database
+    //Checking for previous data to prevent temp query to database
     if(username == userInfo.username){
         usernameUpdated = true;
     }
@@ -52,27 +49,13 @@ router.put("/updateInfo", async (req, resp) => {
         emailUpdated = true;
     }
 
+    //Validating username
+    if(! await validateUsername(username, resp)) return;
+
     //Validating email
     const validEmail = emailValidator.validate(email);
     if(!validEmail){
-        sendResponse({state: "failed", message: "Invalid email"}, resp);
-        return
-    }
-
-    if(username == "" || email == ""){
-        const message = {"state": "failed", "message": "Fields can not be empty"};
-        sendResponse(message, resp);
-        return
-    }
-
-    if(username.length > 24){
-        const message = {"message": "Maximum length for username is 24 character", "state": "failed"};
-        sendResponse(message, resp);
-        return
-    }
-
-    if(bio.length > 250){
-        const message = {"message": "Maximum length for bio is 250 character", "state": "failed"};
+        const message = {state: "failed", message: "Invalid email"};
         sendResponse(message, resp);
         return
     }
@@ -84,25 +67,27 @@ router.put("/updateInfo", async (req, resp) => {
             where: {
                 username: username
             }
-        })
+        });
 
         if(isNewUsernameExist){
-            const message = {"state": "failed", "message": "This username exist"};
+            const message = {state: "failed", message: "This username exist"};
             sendResponse(message, resp);
             return
         }
 
         //Updating username
-        try {
-            await usersTB.update({
-                username: username
-            }, {
-                where: {
-                    userid: userInfo.id
-                }
-            }).then(() => {usernameUpdated = true;})
-        } catch (error) {
-            const message = {"state": "failed", "message": "Couldn't update username"};
+        const updateUsername = await usersTB.update({
+            username: username
+        },{
+            where: {
+                userid: userInfo.id
+            }
+        });
+
+        if(updateUsername){
+            usernameUpdated = true;
+        }else{
+            const message = {state: "failed", message: "Couldn't update username"}; 
             sendResponse(message, resp);
             return
         }
@@ -110,68 +95,71 @@ router.put("/updateInfo", async (req, resp) => {
 
     //Updating email if the username was not the same as in token
     if(emailUpdated == false){
+        //Checking email exist or not
         const isNewEmailExist = await usersTB.findOne({
             where: {
                 email: email
             }
-        })
+        });
 
         if(isNewEmailExist){
-            const message = {"state": "failed", "message": "This email exist"};
+            const message = {state: "failed", message: "This email exist"};
             sendResponse(message, resp);
             return
         }
 
-        try {
-            await usersTB.update({
-                email: email
-            }, {
-                where: {
-                    userid: userInfo.id
-                }
-            }).then(() => {emailUpdated = true})
-        } catch (error) {
-            const message = {"state": "failed", "message": "Couldn't update email"};
+        const updateEmail = await usersTB.update({
+            email: email
+        },{
+            where: {
+                userid: userInfo.id
+            }
+        });
+
+        if(updateEmail){
+            emailUpdated = true;
+        }else{
+            const message = {state: "failed", message: "Couldn't update email"};
             sendResponse(message, resp);
             return
         }
     }
 
     //Updating Bio
-    try {
-        const updateBio = await usersTB.update({
-            bio: bio
-        }, {
-            where: {
-                userid: userInfo.id
-            }
-        });
-
-        if(updateBio){
-            bioUpdated = true;
+    const updateBio = await usersTB.update({
+        bio: bio
+    }, {
+        where: {
+            userid: userInfo.id
         }
-    } catch (error) {
-        const message = {"state": "failed", "message": "Couldn't update bio"};
+    });
+
+    if(updateBio){
+        bioUpdated = true;
+    }else{
+        const message = {state: "failed", message: "Couldn't update bio"};
         sendResponse(message, resp);
         return
     }
 
     if(usernameUpdated && emailUpdated && bioUpdated){
-        const message = {"state": "success", "message": "Data updated successfully"};
         //Generating new token
         var newToken = {};
-        
         newToken.username = username;
         newToken.email = email;
         newToken.id = userInfo.id;
         newToken.role = userInfo.role;
         newToken.profilePic = userInfo.profilePic;
-
         const token = jwt.sign(newToken, process.env.JWT_SECRET,{
             expiresIn: "1h"
         });
         resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
+        const message = {state: "success", message: "Data updated successfully"};
         sendResponse(message, resp);
+        return
+    }else{
+        const message = {state: "failed", message: "Couldn't update data"};
+        sendResponse(message, resp, {}, 500);
         return
     }
 });
