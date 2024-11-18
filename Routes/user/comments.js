@@ -248,6 +248,6 @@ router.delete("/:commentId/delete", async (req, resp) => {
         sendResponse(message, resp, {}, 404);
         return
     }
-})
+});
 
 module.exports = router;

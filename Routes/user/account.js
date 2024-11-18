@@ -9,26 +9,27 @@ const { sendResponse } = require("../../utils/opt");
 const { validateBlogInfo } = require("../../utils/validate");
 
 router.get("/info", async(req, resp) => {
-    const token = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    const getUserData = await usersTB.findOne({
+    const { userInfo } = req;
+    const userAccountInfo = await usersTB.findOne({
         where: {
-            username: token.username
+            username: userInfo.username
         }
-    })
+    });
+
     var userData = {
-        userid: getUserData.dataValues.userid,
-        username: getUserData.dataValues.username,
-        email: getUserData.dataValues.email,
-        joinDate: getUserData.dataValues.joinDate,
-        role: getUserData.dataValues.role,
-        profilePic: getUserData.dataValues.profilePic,
-        bio: getUserData.dataValues.bio,
+        userid: userAccountInfo.dataValues.userid,
+        username: userAccountInfo.dataValues.username,
+        email: userAccountInfo.dataValues.email,
+        joinDate: userAccountInfo.dataValues.joinDate,
+        role: userAccountInfo.dataValues.role,
+        profilePic: userAccountInfo.dataValues.profilePic,
+        bio: userAccountInfo.dataValues.bio,
         token: req.cookies.token
     };
     
     sendResponse(userData, resp);
     return
-})
+});
 
 router.put("/updateInfo", async (req, resp) => {
     const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
