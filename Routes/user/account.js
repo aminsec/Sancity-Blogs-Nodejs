@@ -257,63 +257,23 @@ router.get("/favorites", async (req, resp) => {
 });
 
 router.get("/likes", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
+
     //Getting user liked posts list
     const likedBlogs = await usersTB.findOne({
         attributes: ["likedPosts"],
         where: {
             userid: userInfo.id
         }
-    })
+    });
+
     const blogs = likedBlogs.dataValues.likedPosts;
     var blogsArray = blogs.split(",");
+
     //removing 0 item from lists that is default value of savedPosts column in DB
-    const indexOfDefaultValue = blogsArray.indexOf("0");
-    if(indexOfDefaultValue > -1){
-        blogsArray.splice(indexOfDefaultValue, 1);
-    }
-    //If the list is empty, we show a null message
-    if(blogsArray.length == 0){
-        sendResponse({"state": "failed", "message": "Nothing to show"}, resp);
-        return;
-    }
-    //Getting each blog info
-    const getBlogsData = async () => {
-        var likedBlogsList = [];
-        for(var i = 0; i < blogsArray.length; i++){
-            var blogsInfo = {}
-            const getBlogData = await blogsTB.findOne({
-                where: {
-                    blog_id: blogsArray[i],
-                    is_public: 1
-                }
-            })
-            if(getBlogData == null){
-                continue
-            }
-
-            var keysToExtractFromBlog = ["blog_content", "blog_id", "blog_image", "blog_title", "is_public", "userid", "isCommentOff", "showLikes", "likes", "createdAt", "tags"];
-            var blogData = checkBlogInfo(getBlogData.dataValues, keysToExtractFromBlog);
-            const userBLogData = await usersTB.findOne({
-                where: {
-                    userid: blogData.userid
-                }
-            })
-
-            const blogUserInfo = {
-                userid: userBLogData.dataValues.userid,
-                username: userBLogData.dataValues.username, 
-                profilePic: userBLogData.dataValues.profilePic
-            };
-
-            blogsInfo.user = blogUserInfo;
-            blogsInfo.content = blogData;
-            likedBlogsList.push(blogsInfo)
-        }
-        return likedBlogsList;
-    }
-    var blogsContent = await getBlogsData();
-    sendResponse({state: "success", content: blogsContent}, resp);
+    blogsArray = await removeItemFromArray(blogsArray, "0");
+    const message = {state: "success", blogs_id: blogsArray};
+    sendResponse(message, resp);
 });
 
 router.delete("/deleteAccount", async (req, resp) => {
