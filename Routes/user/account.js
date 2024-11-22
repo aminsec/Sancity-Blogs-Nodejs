@@ -6,7 +6,7 @@ const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB, commentsTB, messagesTB } = require("../../database");
 const { sendResponse, removeItemFromArray } = require("../../utils/opt");
-const { validateBlogInfo, isUndefined, validateUsername } = require("../../utils/validate");
+const { isUndefined, validateUsername } = require("../../utils/validate");
 
 router.get("/info", async(req, resp) => {
     const { userInfo } = req;

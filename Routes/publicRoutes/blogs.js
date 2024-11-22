@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const { Op } = require('sequelize');
-const { commentsTB, usersTB, blogsTB } = require("../../database");
+const { commentsTB, blogsTB } = require("../../database");
 const { validateUserInputAsNumber, isUndefined, validateBlogInfo, validateType } = require("../../utils/validate");
 const { sendResponse, sortObjectByValuesDescending, queryUserInfo } = require("../../utils/opt");
 
