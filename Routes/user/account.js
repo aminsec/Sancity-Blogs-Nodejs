@@ -16,19 +16,24 @@ router.get("/info", async(req, resp) => {
         }
     });
 
-    var userData = {
-        userid: userAccountInfo.dataValues.userid,
-        username: userAccountInfo.dataValues.username,
-        email: userAccountInfo.dataValues.email,
-        joinDate: userAccountInfo.dataValues.joinDate,
-        role: userAccountInfo.dataValues.role,
-        profilePic: userAccountInfo.dataValues.profilePic,
-        bio: userAccountInfo.dataValues.bio,
-        token: req.cookies.token
-    };
-    
-    sendResponse(userData, resp);
-    return
+    if(userAccountInfo){
+        var userData = {
+            userid: userAccountInfo.dataValues.userid,
+            username: userAccountInfo.dataValues.username,
+            email: userAccountInfo.dataValues.email,
+            joinDate: userAccountInfo.dataValues.joinDate,
+            role: userAccountInfo.dataValues.role,
+            profilePic: userAccountInfo.dataValues.profilePic,
+            bio: userAccountInfo.dataValues.bio,
+            token: req.cookies.token
+        };
+
+        sendResponse(userData, resp);
+        return
+    }else{
+        const message = {state: "failed", message: "User not found"};
+        sendResponse(message, resp, {}, 404);
+    }
 });
 
 router.put("/updateInfo", async (req, resp) => {
