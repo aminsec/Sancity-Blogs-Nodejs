@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const { sendResponse } = require("../../utils/opt");
 const { validateUserInputAsNumber, isUndefined } = require("../../utils/validate");
 const { messagesTB } =  require("../../database");
