@@ -6,8 +6,7 @@ const { validateUserInputAsNumber } = require("../../utils/validate");
 const { sendResponse } = require("../../utils/opt");
 
 router.get("/", async (req, resp) => {
-    const readyNotifications = [];
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
     const userid = userInfo.id;
 
     const notifcations = await notificationsTB.findAll({
@@ -20,23 +19,7 @@ router.get("/", async (req, resp) => {
         limit: 10
     });
 
-    //Converting timestamp to (5 sep) format
-    for(index in notifcations){
-        const notifInfo = notifcations[index].dataValues;
-        const timestamp = new Date();
-        // Use Intl.DateTimeFormat to format the date
-        const formatter = new Intl.DateTimeFormat('en-GB', {
-        day: 'numeric',
-        month: 'short'
-        });
-
-        const formattedDate = formatter.format(timestamp);
-        delete notifInfo.timestamp
-        notifInfo.date = formattedDate;
-        readyNotifications.push(notifInfo);
-    };
-
-    const message = {state: "success", notifications: readyNotifications};
+    const message = {state: "success", notifications: notifcations};
     sendResponse(message, resp);
 });
 
