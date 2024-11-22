@@ -9,6 +9,7 @@ router.get("/", async (req, resp) => {
     const { userInfo } = req;
     const userid = userInfo.id;
 
+    //Quering notifications based on their times
     const notifcations = await notificationsTB.findAll({
         where: {
             userid: userid
@@ -24,8 +25,10 @@ router.get("/", async (req, resp) => {
 });
 
 router.post("/", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    const seenNotifs = await notificationsTB.update({
+    const { userInfo } = req;
+    
+    //Updating notifications seen state
+    await notificationsTB.update({
         seen: 1
     }, {
         where: {
