@@ -29,7 +29,7 @@ async function createNotification(notif){
         comment_id: notif.comment_id ? notif.comment_id : null,
         timestamp: Date.now().toString(),
         seen: 0
-    })
+    });
 };
 
 async function queryUserInfo(userid){
