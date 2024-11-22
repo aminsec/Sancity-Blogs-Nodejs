@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
-const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB, commentsTB, messagesTB } = require("../../database");
+const { usersTB, blogsTB, dead_sessionsTB, notificationsTB, commentsTB, messagesTB } = require("../../database");
 const { sendResponse, removeItemFromArray } = require("../../utils/opt");
 const { isUndefined, validateUsername } = require("../../utils/validate");
 
@@ -15,7 +15,7 @@ router.get("/info", async(req, resp) => {
             username: userInfo.username
         }
     });
-    console.log(userAccountInfo)
+
     var userData = {
         userid: userAccountInfo.dataValues.userid,
         username: userAccountInfo.dataValues.username,
@@ -336,12 +336,12 @@ router.delete("/deleteAccount", async (req, resp) => {
     });
     await messagesTB.destroy({
         where: {
-            sender: userInfo.id
+            sender: userInfo.username
         }
     });
     await messagesTB.destroy({
         where: {
-            receiver: userInfo.id
+            receiver: userInfo.username
         }
     });
     
