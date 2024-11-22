@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const { commentsTB, usersTB, blogsTB } = require("../../database");
-const { validateUserInputAsNumber } = require("../../utils/validate");
+const { validateUserInputAsNumber, validateCommentValues } = require("../../utils/validate");
 const { removeItemFromArray, createNotification, sendResponse } = require("../../utils/opt");
 
 router.get("/liked-comments", async (req, resp) => {
@@ -23,48 +22,35 @@ router.get("/liked-comments", async (req, resp) => {
 
 router.post("/:blogId/addComment", async (req, resp) => {
     var { blogId } = req.params;
-    if(!validateUserInputAsNumber(blogId)){
-        sendResponse({state: "failed", message: "Invalid blog Id"}, resp);
-        return
-    }
     var { comment } = req.body;
-    var userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    var invalidInputRegex = new RegExp("^\\s+$");
+    var { userInfo } = req;
 
-    //Validation comment content
-    if(comment == undefined){
-        sendResponse({state: "failed", message: "comment parameter required"}, resp);
-        return
-    }
-    if(comment == ""){
-        sendResponse({state: "failed", message: "Leave a valid comment"}, resp);
-        return
-    }
-    
-    if(comment.match(invalidInputRegex)){
-        sendResponse({state: "failed", message: "Leave a valid comment"}, resp);
-        return
-    }
-
-    if(comment.length > 276){
-        sendResponse({state: "failed", message: "Comment is too long"}, resp);
+    if(! await validateUserInputAsNumber(blogId)){
+        const message = {state: "failed", message: "Invalid blog Id"};
+        sendResponse(message, resp, {}, 400);
         return
     }
 
     //Checking blog is public and commentable 
-    const isPublic = await blogsTB.findOne({
+    const blog = await blogsTB.findOne({
         where: {
             blog_id: blogId,
             is_public: 1,
             isCommentOff: 0
         }
-    })
+    });
+
     //Return if blog is not found or is not public or comments are off
-    if(isPublic == null){
-        sendResponse({state: "failed", message: "Blog not found"}, resp);
+    if(blog == null){
+        const message = {state: "failed", message: "Blog not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
-    
+
+    //Validating comment content
+    const validatedComment = await validateCommentValues(comment, resp);
+    if(!validatedComment) return;
+
     //Getting comment time 
     var createdTime = Date.now().toString();
 
@@ -73,47 +59,52 @@ router.post("/:blogId/addComment", async (req, resp) => {
         comment_text: comment,
         commentedAt: createdTime,
         userid: userInfo.id
-    })
+    });
 
     if(addComment){
-        sendResponse({state: "success", message: "Comment added successfully"}, resp);
+        const message = {state: "success", message: "Comment added successfully"};
+        sendResponse(message, resp);
+
         //Sending notification to user
         const notifInfo = {
-            userid: isPublic.dataValues.userid,
+            userid: blog.dataValues.userid,
             notif_title: `${userInfo.username} commented on your blog`,
             acted_userid: userInfo.id,
             action_name: "commented_blog",
-            blog_id: isPublic.dataValues.blog_id,
+            blog_id: blog.dataValues.blog_id,
             comment_id: addComment.dataValues.commentId,
 
-        }
+        };
+
         if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
             createNotification(notifInfo);
             return
         }
-
     }
 });
 
 router.get("/:commentId/like", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
     const { commentId } = req.params;
     var messageToSend = {};
 
     //Checking user input
-    if(!validateUserInputAsNumber(commentId)){
-        sendResponse({state: "failed", message: "Invalid comment Id"}, resp);
+    if(! await validateUserInputAsNumber(commentId)){
+        const message = {state: "failed", message: "Invalid comment Id"};
+        sendResponse(message, resp);
         return
     }
 
     //Checking is comment exist or not
-    const isCommentExist = await commentsTB.findOne({
+    const comment = await commentsTB.findOne({
         where: {
             commentId: commentId
         }
-    })
-    if(!isCommentExist){
-        sendResponse({state: "failed", message: "Comment not found"}, resp);
+    });
+
+    if(!comment){
+        const message = {state: "failed", message: "Comment not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
     
@@ -123,121 +114,139 @@ router.get("/:commentId/like", async (req, resp) => {
         where: {
             userid: userInfo.id
         }
-    })
+    });
+
     if(getLikedComments){
         var likedComments = getLikedComments.dataValues.likedComments;
-        var commentsId = likedComments.split(",");
-        if(commentsId.includes(commentId)){
-            commentsId = removeItemFromArray(commentsId, commentId); //If the comment has been liked, we remove it from the list
+        var commentsIdList = likedComments.split(",");
+
+        //If user has liked comment we remove it from their list
+        if(commentsIdList.includes(commentId)){
+            commentsIdList = await removeItemFromArray(commentsIdList, commentId); 
+            
             //Decreasing the likes of comment
             const getLikesOfcomment = await commentsTB.findOne({
                 where: {
                     commentId: commentId
                 }
-            })
+            });
+
             var likesOfComment = getLikesOfcomment.dataValues.commentLikes;
             likesOfComment -= 1;
+
             //Inserting updated likes 
             const updateLikesOfComment = await commentsTB.update({
                 commentLikes: likesOfComment
-            }, 
-            {
+            }, {
                 where: {
                     commentId: commentId
                 }
-            })
+            });
+
             if(updateLikesOfComment){
                 messageToSend = {state: "success", message: "Comment disliked successfully"};
             }
             
         }else{
-            commentsId.push(commentId); //If the comment is not in the list, we add it
+            //If the comment is not in the list, we add it
+            commentsIdList.push(commentId); 
+
             //Increasing the likes of comment
             const getLikesOfcomment = await commentsTB.findOne({
                 where: {
                     commentId: commentId
                 }
-            })
+            });
+
             var likesOfComment = getLikesOfcomment.dataValues.commentLikes;
             likesOfComment += 1;
+
             //Inserting updated likes 
             const updateLikesOfComment = await commentsTB.update({
                 commentLikes: likesOfComment
-            }, 
-            {
+            }, {
                 where: {
                     commentId: commentId
                 }
-            })
+            });
+
             if(updateLikesOfComment){
                 messageToSend = {state: "success", message: "Comment liked successfully"};
                 //Sending notification to user
-                 
-                    const notifInfo = {
-                        userid: isCommentExist.dataValues.userid,
-                        notif_title: `${userInfo.username} liked your comment`,
-                        acted_userid: userInfo.id,
-                        action_name: "liked_comment",
-                        blog_id: isCommentExist.dataValues.blog_id,
-                        comment_id: isCommentExist.dataValues.commentId
-                    }
-                    if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
-                        createNotification(notifInfo);
-                    }
-                    
-                
- 
+                const notifInfo = {
+                    userid: comment.dataValues.userid,
+                    notif_title: `${userInfo.username} liked your comment`,
+                    acted_userid: userInfo.id,
+                    action_name: "liked_comment",
+                    blog_id: comment.dataValues.blog_id,
+                    comment_id: comment.dataValues.commentId
+                }
+                if(notifInfo.userid !== notifInfo.acted_userid){ // preventing users to sending notifications to theirselves
+                    createNotification(notifInfo);
+                }
             }  
         }
         
-        var newCommentsId = commentsId.join(",");
+        var newCommentsId = commentsIdList.join(",");
         const insertNewComments = await usersTB.update({
             likedComments: newCommentsId,
-          },
-          {
+          },{
             where: {
                 userid: userInfo.id
             }
-          }
-        )
+          });
+
         if(insertNewComments){
             sendResponse(messageToSend, resp);
             return
         }
+    }else{
+        const message = {state: "failed", message: "An error accoured"};
+        sendResponse(message, resp, {}, 500);
     }
-})
+});
 
 router.delete("/:commentId/delete", async (req, resp) => {
     const { commentId } = req.params;
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
 
     if(!validateUserInputAsNumber(commentId)){
-        sendResponse({state: "failed", message: "Comment not found"}, resp);
+        const message = {state: "failed", message: "Comment not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
 
+    //Checking authorization 
     const checkIsDeletable = await commentsTB.findOne({
         where: {
             commentId: commentId,
             userid: userInfo.id
         }
     });
+
     if(checkIsDeletable){
         const deleteComment = await commentsTB.destroy({
             where: {
                 commentId: commentId,
                 userid: userInfo.id
             }
-        })
+        });
+
         if(deleteComment){
-            sendResponse({state: "success", message: "Comment deleted successfully"}, resp);
+            const message = {state: "success", message: "Comment deleted successfully"};
+            sendResponse(message, resp);
+            return
+        }else{
+            const message = {state: "failed", message: "Coulnd't delete comment"};
+            sendResponse(message, resp, {}, 500);
             return
         }
 
     }else{
-        sendResponse({state: "failed", message: "Comment not found"}, resp);
+        const message = {state: "failed", message: "Comment not found"};
+        sendResponse(message, resp, {}, 404);
         return
     }
-})
+});
 
 module.exports = router;

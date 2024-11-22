@@ -6,10 +6,10 @@ const { validateUserInputAsNumber } = require("../../utils/validate");
 const { sendResponse } = require("../../utils/opt");
 
 router.get("/", async (req, resp) => {
-    const readyNotifications = [];
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
     const userid = userInfo.id;
 
+    //Quering notifications based on their times
     const notifcations = await notificationsTB.findAll({
         where: {
             userid: userid
@@ -20,29 +20,15 @@ router.get("/", async (req, resp) => {
         limit: 10
     });
 
-    //Converting timestamp to (5 sep) format
-    for(index in notifcations){
-        const notifInfo = notifcations[index].dataValues;
-        const timestamp = new Date();
-        // Use Intl.DateTimeFormat to format the date
-        const formatter = new Intl.DateTimeFormat('en-GB', {
-        day: 'numeric',
-        month: 'short'
-        });
-
-        const formattedDate = formatter.format(timestamp);
-        delete notifInfo.timestamp
-        notifInfo.date = formattedDate;
-        readyNotifications.push(notifInfo);
-    };
-
-    const message = {state: "success", notifications: readyNotifications};
+    const message = {state: "success", notifications: notifcations};
     sendResponse(message, resp);
 });
 
 router.post("/", async (req, resp) => {
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-    const seenNotifs = await notificationsTB.update({
+    const { userInfo } = req;
+    
+    //Updating notifications seen state
+    await notificationsTB.update({
         seen: 1
     }, {
         where: {
@@ -56,7 +42,7 @@ router.post("/", async (req, resp) => {
 
 router.delete("/:notifId", async(req, resp) => {
     const { notifId } = req.params;
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
 
     //There are two kinds of notifId here, first an integer like 12,22,34 ... and second is "all"
     if(notifId == "all"){
@@ -72,17 +58,19 @@ router.delete("/:notifId", async(req, resp) => {
             return
         }else{
             const message = {state: "failed"};
-            sendResponse(message, resp);
+            sendResponse(message, resp, {}, 500);
             return
         }
     }
 
-    if(!validateUserInputAsNumber(notifId)){
+    //Validating user input
+    if(! await validateUserInputAsNumber(notifId)){
         const message = {state: "failed", message: "Notification not found"};
-        sendResponse(message, resp);
+        sendResponse(message, resp, {}, 404);
         return
     }
 
+    //Deleting the notification
     const deleteNotif = await notificationsTB.destroy({
         where: {
             id: notifId,
@@ -99,6 +87,6 @@ router.delete("/:notifId", async(req, resp) => {
         sendResponse(message, resp);
         return
     }
-})
+});
 
 module.exports = router;

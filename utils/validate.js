@@ -59,7 +59,7 @@ async function validateBlogValues(bannerPic, title, body, tags, option, resp){
     
     //Checking options types 
     for(key of Object.values(option)){
-        if(!await validateType(resp, "boolean", key)) return;
+        if(!await validateType(resp, "boolean", key)) return false;
     }
    
 
@@ -95,17 +95,23 @@ async function validateBlogValues(bannerPic, title, body, tags, option, resp){
         return false
     }
 
-    if(bannerPic){
-        const base64Data = bannerPic.replace(/^data:image\/png;base64,/, "");
-        const buffer = Buffer.from(base64Data, 'base64');
-        let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex");
-        var blog_image = "/api/v1/profilePics/" + randomFileName;
-        const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
-        fs.writeFile(filePath, buffer, (err) => {
-            if (err) {
-                console.log(err);
-            }
-        });
+    try {
+        if(bannerPic){
+            const base64Data = bannerPic.replace(/^data:image\/png;base64,/, "");
+            const buffer = Buffer.from(base64Data, 'base64');
+            let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex");
+            var blog_image = "/api/v1/profilePics/" + randomFileName;
+            const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
+            fs.writeFile(filePath, buffer, (err) => {
+                if (err) {
+                    console.log(err);
+                }
+            });
+        }
+    } catch (error) {
+        const message = {state: "failed", message: "Couldn't upload image"};
+        sendResponse(message, resp, {}, 500);
+        return false
     }
 
     return {state: "sucess", blog_image: blog_image};
@@ -189,11 +195,44 @@ async function validateUsername(username, resp){
     return true
 };
 
+async function validateCommentValues(comment, resp){
+    //This regex matches only spaces 
+    var invalidInputRegex = new RegExp("^\\s+$");
+
+    //Validating comment content
+    if(comment == undefined){
+        const message = {state: "failed", message: "comment parameter required"};
+        sendResponse(message, resp, {}, 404);
+        return false;
+    }
+
+    if(comment == ""){
+        const message = {state: "failed", message: "Leave a valid comment"};
+        sendResponse(message, resp, {}, 404);
+        return false;
+    }
+    
+    if(comment.match(invalidInputRegex)){
+        const message = {state: "failed", message: "Leave a valid comment"};
+        sendResponse(message, resp, {}, 404);
+        return false;
+    }
+
+    if(comment.length > 276){
+        const message = {state: "failed", message: "Comment is too long"};
+        sendResponse(message, resp, {}, 404);
+        return false;
+    }
+
+    return true;
+}
+
 module.exports = {
     validateUserInputAsNumber,
+    validateCommentValues,
     validateBlogValues,
-    validateBlogInfo,
     validateUsername,
+    validateBlogInfo,
     validateType,
     validateWST,
     validateWSM,
