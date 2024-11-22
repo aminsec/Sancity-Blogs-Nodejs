@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
-const { usersTB, blogsTB, dead_sessionsTB, sequelize, notificationsTB, commentsTB, messagesTB } = require("../../database");
+const { usersTB, blogsTB, dead_sessionsTB, notificationsTB, commentsTB, messagesTB } = require("../../database");
 const { sendResponse, removeItemFromArray } = require("../../utils/opt");
 const { isUndefined, validateUsername } = require("../../utils/validate");
 
@@ -15,20 +15,25 @@ router.get("/info", async(req, resp) => {
             username: userInfo.username
         }
     });
-    console.log(userAccountInfo)
-    var userData = {
-        userid: userAccountInfo.dataValues.userid,
-        username: userAccountInfo.dataValues.username,
-        email: userAccountInfo.dataValues.email,
-        joinDate: userAccountInfo.dataValues.joinDate,
-        role: userAccountInfo.dataValues.role,
-        profilePic: userAccountInfo.dataValues.profilePic,
-        bio: userAccountInfo.dataValues.bio,
-        token: req.cookies.token
-    };
-    
-    sendResponse(userData, resp);
-    return
+
+    if(userAccountInfo){
+        var userData = {
+            userid: userAccountInfo.dataValues.userid,
+            username: userAccountInfo.dataValues.username,
+            email: userAccountInfo.dataValues.email,
+            joinDate: userAccountInfo.dataValues.joinDate,
+            role: userAccountInfo.dataValues.role,
+            profilePic: userAccountInfo.dataValues.profilePic,
+            bio: userAccountInfo.dataValues.bio,
+            token: req.cookies.token
+        };
+
+        sendResponse(userData, resp);
+        return
+    }else{
+        const message = {state: "failed", message: "User not found"};
+        sendResponse(message, resp, {}, 404);
+    }
 });
 
 router.put("/updateInfo", async (req, resp) => {
@@ -336,12 +341,12 @@ router.delete("/deleteAccount", async (req, resp) => {
     });
     await messagesTB.destroy({
         where: {
-            sender: userInfo.id
+            sender: userInfo.username
         }
     });
     await messagesTB.destroy({
         where: {
-            receiver: userInfo.id
+            receiver: userInfo.username
         }
     });
     
