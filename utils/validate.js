@@ -79,7 +79,7 @@ async function validateBlogValues(bannerPic, title, body, tags, option, resp){
         }
         var tagsValue = tags.split("#");
         tagsValue.splice(0, 1);
-        var validTagRegex = new RegExp("^[a-zA-Z0-9]+$");
+        var validTagRegex = new RegExp("^[a-zA-Z0-9_\-]+$");
         for(var tag of tagsValue){
             if(!tag.match(validTagRegex)){
                 const message = {state: "failed", message: "Just numbers and characters are allowed as tag"};
