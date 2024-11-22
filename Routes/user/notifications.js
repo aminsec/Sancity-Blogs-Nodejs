@@ -42,7 +42,7 @@ router.post("/", async (req, resp) => {
 
 router.delete("/:notifId", async(req, resp) => {
     const { notifId } = req.params;
-    const userInfo = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+    const { userInfo } = req;
 
     //There are two kinds of notifId here, first an integer like 12,22,34 ... and second is "all"
     if(notifId == "all"){
@@ -58,17 +58,19 @@ router.delete("/:notifId", async(req, resp) => {
             return
         }else{
             const message = {state: "failed"};
-            sendResponse(message, resp);
+            sendResponse(message, resp, {}, 500);
             return
         }
     }
 
-    if(!validateUserInputAsNumber(notifId)){
+    //Validating user input
+    if(! await validateUserInputAsNumber(notifId)){
         const message = {state: "failed", message: "Notification not found"};
-        sendResponse(message, resp);
+        sendResponse(message, resp, {}, 404);
         return
     }
 
+    //Deleting the notification
     const deleteNotif = await notificationsTB.destroy({
         where: {
             id: notifId,
@@ -85,6 +87,6 @@ router.delete("/:notifId", async(req, resp) => {
         sendResponse(message, resp);
         return
     }
-})
+});
 
 module.exports = router;
