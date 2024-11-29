@@ -5,7 +5,7 @@ const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
 const { usersTB, blogsTB, dead_sessionsTB, notificationsTB, commentsTB, messagesTB } = require("../../database");
-const { sendResponse, removeItemFromArray } = require("../../utils/opt");
+const { sendResponse, removeItemFromArray, genBcrypt } = require("../../utils/opt");
 const { isUndefined, validateUsername } = require("../../utils/validate");
 
 router.get("/info", async(req, resp) => {
@@ -199,10 +199,6 @@ router.put("/changePassword", async (req, resp) => {
     const { userInfo } = req;
     const { newPass, oldPass} = req.body;
 
-    //hashing the password to md5
-    let userNewHashPassword = crypto.createHash('md5').update(newPass).digest("hex"); 
-    let userOldHashPassword = crypto.createHash('md5').update(oldPass).digest("hex");
-
     //Checking user inputs
     if(await isUndefined(resp, oldPass, newPass)) return;
 
@@ -213,19 +209,23 @@ router.put("/changePassword", async (req, resp) => {
     }
 
     //Checking user password
-    const isPasswordCorrect = await usersTB.findOne({
+    const userData = await usersTB.findOne({
         where: {
-            username: userInfo.username,
-            password: userOldHashPassword
+            username: userInfo.username
         }
     });
 
-    if(!isPasswordCorrect){
+    //Comparing passwords
+    const userCurrentHashedPassword = userData.password;
+    const passwordCheckResult = await genBcrypt("compare", oldPass, userCurrentHashedPassword);
+    if(passwordCheckResult == false){
         const message = {state: "failed", message: "Current password is incorrect"};
         sendResponse(message, resp);
         return
     }
 
+    //Updating password
+    const userNewHashPassword = await genBcrypt("create", newPass);
     const updatePassword = await usersTB.update({
         password: userNewHashPassword
     }, {

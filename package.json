@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest"
   },
   "author": "aminsec",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.4.5",
     "email-validator": "^2.0.4",
@@ -24,5 +25,8 @@
     "sequelize": "^6.37.3",
     "uuid": "^10.0.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.6"
   }
 }
