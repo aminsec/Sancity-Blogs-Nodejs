@@ -141,7 +141,8 @@ router.get("/logout", async (req, resp) => {
             //validating the cookie's value to insert only valid jwt token to dead_sessions table
             jwt.verify(req.cookies.token, process.env.JWT_SECRET);
             const revokeToken = await dead_sessionsTB.create({
-                session: req.cookies.token
+                session: req.cookies.token,
+                timestamp: Date.now().toString()
             })
             resp.cookie("token", "deleted");
             resp.redirect("/");
