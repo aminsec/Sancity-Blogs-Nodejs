@@ -121,7 +121,6 @@ async function validateBlogValues(bannerPic, title, body, tags, option, resp){
 async function validateType(resp, expectedType, ...variables){
     for(vals of variables){
         if(typeof vals != expectedType){
-            console.log(typeof vals, ": ", expectedType);
             const message = {message: "Invalid input type", state: "failed"};
             sendResponse(message, resp, {}, 400);
             return false

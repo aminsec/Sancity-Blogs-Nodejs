@@ -10,7 +10,6 @@ const WebSocket = require('ws');
  */
 
 async function handelWSC(client, wss) {
-    console.log("Connection from client...");
     const clientToken = client.protocol; // getting the auth-token via Sec-WebSocket-Protocol header
     const [isValidToken, userInfo] = await validateWST(clientToken); //Validating client token and get userInfo if it's valid
     if(isValidToken == false){
@@ -64,7 +63,6 @@ async function handelWSC(client, wss) {
 
     client.onclose = () => {
         clearInterval(interval);
-        console.log("A client disconnected");
     }
 }
 
