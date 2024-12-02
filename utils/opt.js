@@ -1,4 +1,5 @@
 const { notificationsTB, usersTB } = require("../database");
+const bcrypt = require("bcrypt");
 
 //Function to send normall messages
 function sendResponse(data, resp, headers = {}, code = 200){
@@ -62,7 +63,23 @@ async function sortObjectByValuesDescending(obj) {
     );
 }
 
+//Function to create and compare bcrypt 
+async function genBcrypt(operation, userPass, hashedPassword){
+    const saltRounds = 10;
+    if(operation == "create"){
+        const salt = await bcrypt.genSalt(saltRounds);
+        const hashedPassword = await bcrypt.hash(userPass, salt);
+        return hashedPassword
+    }
+
+    if(operation == "compare"){
+        const result = await bcrypt.compare(userPass, hashedPassword);
+        return result
+    }
+}
+
 module.exports = {
+    genBcrypt,
     sendResponse,
     removeItemFromArray,
     createNotification,

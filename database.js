@@ -236,6 +236,11 @@ const dead_sessionsTB = sequelize.define("dead_sessions", {
 
     session: {
         type: DataTypes.STRING
+    },
+
+    timestamp: {
+        type: DataTypes.STRING,
+        allowNull: false
     }
 }, {
     timestamps: false

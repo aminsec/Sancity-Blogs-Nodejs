@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const crypto = require('crypto')
 const { usersTB, dead_sessionsTB } = require("../../database");
 const jwt = require('jsonwebtoken');
 const { isUndefined, validateUsername } = require("../../utils/validate");
-const { sendResponse } = require("../../utils/opt");
+const { sendResponse, genBcrypt } = require("../../utils/opt");
 var validator = require("email-validator");
 
 router.post("/login", async (req, resp) => {
@@ -14,43 +13,48 @@ router.post("/login", async (req, resp) => {
     //Returning, If parameters not defined
     if(await isUndefined(resp, username, password)) return;
 
-    //hashing the password to md5
-    let userHashPassword = crypto.createHash('md5').update(password).digest("hex"); 
-    
     //Quering user's data
     const userData = await usersTB.findOne({
         where: {
-            username: username,
-            password: userHashPassword
+            username: username
         }
     });
 
-    //Responding with 401 if credentials were not valid
+    //Responding with 401 if username was not found
     if(userData == null){
         const message = {message: "Invalid credentials", state: "failed"};
         sendResponse(message, resp, {}, 401);
         return
     }
+
+    //Comparing password
+    const userHashedPassword = userData.dataValues.password;
+    const passwordCheckResult = await genBcrypt("compare", password, userHashedPassword);
     
-    //Getting user's data if it was valid
-    if(userData){
-        const userInfo = {
-            username: userData.username,
-            email: userData.email,
-            id: userData.userid,
-            role: userData.role,
-            profilePic: userData.profilePic
-        };
-        
-        //Signing token
-        const token = jwt.sign(userInfo, process.env.JWT_SECRET,{
-            expiresIn: "1h"
-        });
-        
-        //Responding with token
-        resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
-        resp.end();
+    if(passwordCheckResult == false){
+        const message = {message: "Invalid credentials", state: "failed"};
+        sendResponse(message, resp, {}, 401);
+        return
     }
+    
+    //Getting user's data if credentials were valid
+
+    const userInfo = {
+        username: userData.username,
+        email: userData.email,
+        id: userData.userid,
+        role: userData.role,
+        profilePic: userData.profilePic
+    };
+    
+    //Signing token
+    const token = jwt.sign(userInfo, process.env.JWT_SECRET,{
+        expiresIn: "1h"
+    });
+    
+    //Responding with token
+    resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
+    resp.end();
 });
 
 router.post("/signup", async (req, resp) => {
@@ -98,8 +102,8 @@ router.post("/signup", async (req, resp) => {
     //Inserting user
     var createdTime = Date.now().toString();
     
-    //hashing the password to md5
-    let userHashPassword = crypto.createHash('md5').update(password).digest("hex"); 
+    //hashing the password to bcrypt
+    let userHashPassword = await genBcrypt("create", password);
     
     try {
         //Inserting user's data
@@ -137,7 +141,8 @@ router.get("/logout", async (req, resp) => {
             //validating the cookie's value to insert only valid jwt token to dead_sessions table
             jwt.verify(req.cookies.token, process.env.JWT_SECRET);
             const revokeToken = await dead_sessionsTB.create({
-                session: req.cookies.token
+                session: req.cookies.token,
+                timestamp: Date.now().toString()
             })
             resp.cookie("token", "deleted");
             resp.redirect("/");
