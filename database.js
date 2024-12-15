@@ -70,6 +70,12 @@ const usersTB = sequelize.define("users", {
 
     bio: {
         type: DataTypes.STRING
+    },
+
+    ai_requests: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
     }
 }, {
     timestamps: false
