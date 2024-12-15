@@ -9,6 +9,7 @@ router.post('/summary', async (req, resp) => {
     const { blogId } = req.body;
     const { userInfo } = req;
 
+    //Checking user input
     if(await isUndefined(resp, blogId)) return;
 
     //Checking blog is public 
@@ -69,10 +70,10 @@ router.post('/summary', async (req, resp) => {
             const aiResponse = await model.generateContent(prompt);
 
             //Cleaning ai response to make it convertable 
-            const regxToRemoveLineBreaks = new RegExp(/\n/g);
             let aiResponseText = aiResponse.response.text();
-
-            //Will remove ```json from beginning and ``` from the end and convert to json
+            const regxToRemoveLineBreaks = new RegExp(/\n/g);
+            
+            //Will remove ```json from beginning and ``` from the end and converts to json
             aiResponseText = JSON.parse(aiResponseText.replace(regxToRemoveLineBreaks, "").slice(7, aiResponseText.length).slice(0, -3)); 
             
             if(aiResponseText.state == "success"){
@@ -97,7 +98,7 @@ router.post('/summary', async (req, resp) => {
                     return
                 }
             }else{
-                const message = {state: "failed", message: "Contacting to ai reached to an error. Please try again later"};
+                const message = {state: "failed", message: "Ai didn't provide any response. Please try again later"};
                 sendResponse(message, resp, {}, 403);
                 console.log(aiResponseText.reasone);
                 return
