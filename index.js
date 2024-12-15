@@ -12,6 +12,7 @@ const validateJWT = require('./middlewares/jwt');
 const writers = require("./Routes/publicRoutes/writers");
 const messages = require("./Routes/user/messages");
 const notification = require("./Routes/user/notifications");
+const ai = require("./Routes/user/ai");
 const { handelWSC } = require("./ws/index")
 
 const app = express();
@@ -21,6 +22,7 @@ app.use(cookieParser());
 app.use(bodyparser.json({ limit: "10mb" })); // increasing body size limit
 app.use("/user/", validateJWT);
 app.use("/user", user);
+app.use("/user/ai", ai);
 app.use("/writers/", writers);
 app.use("/user/comments/", UserComments);
 app.use("/user/blogs/", UserBlogs);
