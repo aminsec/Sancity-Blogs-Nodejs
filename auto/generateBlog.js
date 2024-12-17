@@ -2,17 +2,33 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { createClient } = require('pexels');
 const { exec } = require("child_process");
 const crypto = require('crypto');
-const { blogsTB } = require("../database");
+const { blogsTB, generated_ai_blogsTB } = require("../database");
 
 async function Generate_blog(){
     //Connecting to ai to get a random blog
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
+        var model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    } catch (error) {
+        console.log("Coulnd't connect to google ai.", error);
+        return;
+    };
+
+    //Getting generated subjects to prevent repetition
+    let subjectsList = [];
+    const generatedSubjectList = await generated_ai_blogsTB.findAll({
+        attributes: ["subject"]
+    });
+
+    for(vals of generatedSubjectList){
+        subjectsList.push(vals.subject)
+    }
 
     //AI prompt
     const prompt = `
         Im talking to you via API not web interface. I wanna ask you a very very long blog to add my DB, please talk to me in json format and don't include any character that could break json 
-        and don't include the json in md format. The blog content must be greater than 900 words. And the tags must only include a-z and 0-9. Attention to do not give repetitive blogs.
+        and don't include the json in md format. The blog content must be greater than 900 words. And the tags must only include a-z and 0-9.
+        ${subjectsList.length > 0 ? `The blog subject must not be the following list: ${subjectsList.join(' ')}` : ""}
         I want to you to include these in json:
          - blog subject in one word
          - blog title
@@ -33,7 +49,7 @@ async function Generate_blog(){
             state: "failed",
             reason: <reason>
         }
-    `  
+    `;
 
     const aiResponse = await model.generateContent(prompt);
 
@@ -94,13 +110,18 @@ async function Generate_blog(){
             showLikes: "1",
             createdAt: Date.now().toString()
         });
+        console.log(aiResponse.subject)
+        const addSubject = await generated_ai_blogsTB.create({
+            subject: query,
+            createdAt: Date.now().toString()
+        });
 
-        if(createBlog){
+        if(createBlog && addSubject){
             console.log("New blog created");
+        }else{
+            console.log("Couldn't create blog");
         }
     });
 };
 
-Generate_blog();
-
-module.exports = Generate_blog
+module.exports = { Generate_blog }

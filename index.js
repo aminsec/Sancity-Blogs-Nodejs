@@ -37,16 +37,26 @@ app.get('/', (req, res) => {
     res.send('Hello World!!');
 });
 
-const wss = new websocket.Server({ server:server, path: "/chat" }); //Binding WS to HTTP
-wss.on("connection", (client) => {
-    handelWSC(client, wss)
-}); // passing ws connections to its module
+try {
+    // passing ws connections to its module
+    const wss = new websocket.Server({ server:server, path: "/chat" }); //Binding WS to HTTP
+    wss.on("connection", (client) => {
+        handelWSC(client, wss)
+    }); 
 
-//Cron Jobs
-cron.schedule("0 0 * * *", function() {
-    //To generate blog every day
-    Generate_blog();
-});
+} catch (error) {
+    console.log("Couldn't start WS server", error);
+};
+
+try {
+    //Cron Jobs at every 30 minutes
+    cron.schedule("*/30 * * * *", () => {
+        Generate_blog();
+    });
+
+} catch (error) {
+    console.log("Couldn't run cron jobs", error);
+}
 
 const PORT = process.env.APP_PORT || 80; 
 server.listen(PORT, () => {
