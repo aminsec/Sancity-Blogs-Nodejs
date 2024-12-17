@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const cron = require("node-cron");
 const websocket = require('ws');
 const auth = require("./Routes/auth/index");
 const user = require("./Routes/user/account");
@@ -13,7 +14,8 @@ const writers = require("./Routes/publicRoutes/writers");
 const messages = require("./Routes/user/messages");
 const notification = require("./Routes/user/notifications");
 const ai = require("./Routes/user/ai");
-const { handelWSC } = require("./ws/index")
+const { handelWSC } = require("./ws/index");
+const { Generate_blog } = require("./auto/generateBlog");
 
 const app = express();
 const server = http.createServer(app); 
@@ -39,6 +41,12 @@ const wss = new websocket.Server({ server:server, path: "/chat" }); //Binding WS
 wss.on("connection", (client) => {
     handelWSC(client, wss)
 }); // passing ws connections to its module
+
+//Cron Jobs
+cron.schedule("0 0 * * *", function() {
+    //To generate blog every day
+    Generate_blog();
+});
 
 const PORT = process.env.APP_PORT || 80; 
 server.listen(PORT, () => {

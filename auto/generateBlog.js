@@ -12,7 +12,7 @@ async function Generate_blog(){
     //AI prompt
     const prompt = `
         Im talking to you via API not web interface. I wanna ask you a very very long blog to add my DB, please talk to me in json format and don't include any character that could break json 
-        and don't include the json in md format. The blog content must be greater than 900 words. And the tags must only include a-z and 0-9
+        and don't include the json in md format. The blog content must be greater than 900 words. And the tags must only include a-z and 0-9. Attention to do not give repetitive blogs.
         I want to you to include these in json:
          - blog subject in one word
          - blog title
@@ -102,3 +102,5 @@ async function Generate_blog(){
 };
 
 Generate_blog();
+
+module.exports = Generate_blog
