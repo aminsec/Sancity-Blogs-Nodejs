@@ -2,7 +2,8 @@
 This is the Source of Sancity Blogs project(Backend Nodejs) writted by aminsec.
 This project doesn't have a professional UI, cause im not a frontend developer :)
 
-# Technologies 
+# Technologies
+- AI 
 - Node.js
 - Express
 - React
@@ -21,6 +22,7 @@ This project doesn't have a professional UI, cause im not a frontend developer :
 - Notifications
 - Like/Save/Commenting on blogs
 - Search
-- ...
+- AI summarizes blogs to users
+- An AI Connected to push new blogs every 30 minutes to the app
 
-And so many others...
+And so much more...
