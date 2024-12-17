@@ -19,6 +19,7 @@ This project doesn't have a professional UI, cause im not a frontend developer :
 # Some of options
 - Creating account
 - Chat
+- Creating blog
 - Notifications
 - Like/Save/Commenting on blogs
 - Search
