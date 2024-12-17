@@ -4,7 +4,6 @@ const { exec } = require("child_process");
 const crypto = require('crypto');
 const { blogsTB } = require("../database");
 
-
 async function Generate_blog(){
     //Connecting to ai to get a random blog
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
@@ -13,7 +12,7 @@ async function Generate_blog(){
     //AI prompt
     const prompt = `
         Im talking to you via API not web interface. I wanna ask you a very very long blog to add my DB, please talk to me in json format and don't include any character that could break json 
-        and don't include the json in md format. The blog content must be greater than 900 words.
+        and don't include the json in md format. The blog content must be greater than 900 words. And the tags must only include a-z and 0-9
         I want to you to include these in json:
          - blog subject in one word
          - blog title
@@ -54,12 +53,25 @@ async function Generate_blog(){
 
     //Quering to get an image
     client.photos.search({ query, per_page: 1 }).then(async photos => {
+        //Checking if any image exists
+        if(photos.photos.length == 0){
+            console.log("Couldn't found related image");
+            return
+        };
+
+        //Getting image
         const imageURL = photos.photos[0].src.landscape;
-        console.log(imageURL)
+        
+        //Changing image size
+        let originalImageURL = new URL(imageURL);
+        originalImageURL.searchParams.set('w', '2600');
+        originalImageURL.searchParams.set('h', '380');
+        originalImageURL = originalImageURL.toString();
+
         //Downloading the image and saving it in /uploads
-        const filename =  crypto.createHash('md5').update(Date.now().toString()).digest('hex');
-        console.log(filename)
-        exec(`curl "${imageURL}" -o /var/www/html/api/uploads/${filename}`, async (error, stdout, stderr) => {
+        const imageFileName = crypto.createHash('md5').update(Date.now().toString()).digest('hex');
+        const imageAPIPath = "/api/v1/profilePics/" + imageFileName;
+        exec(`curl "${originalImageURL}" -o /var/www/html/api/uploads/${imageFileName}`, async (error, stdout, stderr) => {
             if (error) {
                 console.log(`error: ${error.message}`);
                 return;
@@ -68,14 +80,13 @@ async function Generate_blog(){
                 console.log(`stderr: ${stderr}`);
                 return;
             }
-
         });
 
-         //Adding the blog into the DB
-         const createBlog = await blogsTB.create({
+        //Adding the blog into the DB
+        const createBlog = await blogsTB.create({
             userid: "108",
             blog_content: aiResponseText.body, 
-            blog_image: filename,
+            blog_image: imageAPIPath,
             blog_title: aiResponseText.title,
             tags: blogTags,
             is_public: "1",
@@ -85,10 +96,9 @@ async function Generate_blog(){
         });
 
         if(createBlog){
-            console.log("New blog created")
+            console.log("New blog created");
         }
     });
-
-}
+};
 
 Generate_blog();
