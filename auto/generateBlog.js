@@ -6,13 +6,8 @@ const { blogsTB, generated_ai_blogsTB } = require("../database");
 
 async function Generate_blog(){
     //Connecting to ai to get a random blog
-    try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
-        var model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    } catch (error) {
-        console.log("Coulnd't connect to google ai.", error);
-        return;
-    };
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
+    var model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     //Getting generated subjects to prevent repetition
     let subjectsList = [];
@@ -51,15 +46,26 @@ async function Generate_blog(){
         }
     `;
 
-    const aiResponse = await model.generateContent(prompt);
+    try {
+        var aiResponse = await model.generateContent(prompt);
+    } catch (error) {
+        console.log("Google Ai didn't respone.", error);
+        return
+    }
+    
 
     //Cleaning ai response to make it convertable 
     let aiResponseText = aiResponse.response.text();
     const regxToRemoveLineBreaks = new RegExp(/\n/g);
-            
-    //This will remove ```json from beginning and ``` from the end and converts to json
-    aiResponseText = JSON.parse(aiResponseText.replace(regxToRemoveLineBreaks, "").slice(7, aiResponseText.length).slice(0, -3)); 
     
+    try {
+        //This will remove ```json from beginning and ``` from the end and converts to json
+        aiResponseText = JSON.parse(aiResponseText.replace(regxToRemoveLineBreaks, "").slice(7, aiResponseText.length).slice(0, -3)); 
+    } catch (error) {
+        console.log("Couldn't parse AI response.", error);
+        return
+    }
+   
     //Preparing tags
     const blogTags = `#${aiResponseText.tags.join("#")}`;
 
@@ -71,8 +77,7 @@ async function Generate_blog(){
     client.photos.search({ query, per_page: 1 }).then(async photos => {
         //Checking if any image exists
         if(photos.photos.length == 0){
-            console.log("Couldn't found related image");
-            return
+            throw new Error("There is no image related to this blog.");
         };
 
         //Getting image
@@ -98,30 +103,33 @@ async function Generate_blog(){
             }
         });
 
-        //Adding the blog into the DB
-        const createBlog = await blogsTB.create({
-            userid: "108",
-            blog_content: aiResponseText.body, 
-            blog_image: imageAPIPath,
-            blog_title: aiResponseText.title,
-            tags: blogTags,
-            is_public: "1",
-            isCommentOff: "0",
-            showLikes: "1",
-            createdAt: Date.now().toString()
-        });
-        console.log(aiResponse.subject)
-        const addSubject = await generated_ai_blogsTB.create({
-            subject: query,
-            createdAt: Date.now().toString()
-        });
+        try {
+            //Adding the blog into the DB
+            const createBlog = await blogsTB.create({
+                userid: "108",
+                blog_content: aiResponseText.body, 
+                blog_image: imageAPIPath,
+                blog_title: aiResponseText.title,
+                tags: blogTags,
+                is_public: "1",
+                isCommentOff: "0",
+                showLikes: "1",
+                createdAt: Date.now().toString()
+            });
+            
+            //Adding the created blog subject to createdSubjects list
+            const addSubject = await generated_ai_blogsTB.create({
+                subject: query,
+                createdAt: Date.now().toString()
+            });
 
-        if(createBlog && addSubject){
-            console.log("New blog created");
-        }else{
-            console.log("Couldn't create blog");
+        } catch (error) {
+            console.log("Coulnd't add blog or blog subject to database.", error);
         }
+    }).catch(error => {
+        console.log("Coulnd't get blog image.", error);
     });
 };
 
+Generate_blog();
 module.exports = { Generate_blog }
