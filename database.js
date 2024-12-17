@@ -280,7 +280,28 @@ const messagesTB = sequelize.define("messages", {
     },
 }, {
     timestamps: false
-})
+});
+
+const generated_ai_blogsTB = sequelize.define("generated_ai_blogs", {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+        allowNull: false
+    },
+
+    subject: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+
+    createdAt: {
+        type: DataTypes.STRING,
+        allowNull: false
+    }
+}, {
+    timestamps: false
+});
 
 sequelize.sync();
 
@@ -290,4 +311,5 @@ exports.blogsTB = blogsTB;
 exports.messagesTB = messagesTB;
 exports.notificationsTB = notificationsTB;
 exports.dead_sessionsTB = dead_sessionsTB;
+exports.generated_ai_blogsTB = generated_ai_blogsTB;
 exports.sequelize = sequelize;
