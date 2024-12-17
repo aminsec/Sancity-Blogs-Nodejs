@@ -22,7 +22,7 @@ This project doesn't have a professional UI, cause im not a frontend developer :
 - Notifications
 - Like/Save/Commenting on blogs
 - Search
-- AI summarizes blogs to users
-- An AI Connected to push new blogs every 30 minutes to the app
+- AI summarizes blogs to user
+- AI pushes new blogs every 30 minutes to the app
 
 And so much more...
