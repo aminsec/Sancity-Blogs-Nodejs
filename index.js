@@ -48,15 +48,10 @@ try {
     console.log("Couldn't start WS server", error);
 };
 
-try {
-    //Cron Jobs at every 30 minutes
-    cron.schedule("*/30 * * * *", () => {
-        Generate_blog();
-    });
-
-} catch (error) {
-    console.log("Couldn't run cron jobs", error);
-}
+//Cron Jobs at every 30 minutes
+cron.schedule("*/30 * * * *", () => {
+    Generate_blog();
+});
 
 const PORT = process.env.APP_PORT || 80; 
 server.listen(PORT, () => {
