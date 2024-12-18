@@ -6,12 +6,26 @@ const { sendResponse, sortObjectByValuesDescending, queryUserInfo } = require(".
 
 router.get("/", async (req, resp) => {
     const blogsList = [];
+    const { offset, limit } = req.query;
+
+    //Validating user input
+    if(await isUndefined(resp, offset, limit)) return;
+    if(await validateUserInputAsNumber(offset, limit) == false){
+        const message = {state: "failed", message: "Invalid offset or limit value."};
+        sendResponse(message, resp, {}, 400);
+        return
+    }
 
     //Getting all blogs from database
     const allBlogs = await blogsTB.findAll({
         where: {
             is_public: 1
-        }
+        },
+        order: [
+            ["createdAt", "DESC"]
+        ],
+        limit: Number(limit),
+        offset: Number(offset)
     });
    
     for (blog of allBlogs){
