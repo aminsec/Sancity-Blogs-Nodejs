@@ -21,7 +21,7 @@ const app = express();
 const server = http.createServer(app); 
 
 app.use(cookieParser());
-app.use(bodyparser.json({ limit: "10mb" })); // increasing body size limit
+app.use(bodyparser.json({ limit: "50mb" })); // increasing body size limit
 app.use("/user/", validateJWT);
 app.use("/user", user);
 app.use("/user/ai", ai);
