@@ -85,11 +85,17 @@ async function Generate_blog(){
         const imageURL = photos.photos[0].src.landscape; //For banner
         const thumbnailURL =  photos.photos[0].src.tiny; //For thumbnail
 
-        //Changing image size
+        //Changing banner size
         let originalImageURL = new URL(imageURL);
         originalImageURL.searchParams.set('w', '2900');
         originalImageURL.searchParams.set('h', '390');
         originalImageURL = originalImageURL.toString();
+
+        //Changing thumbnail size
+        let originalThumbnailURL = new URL(thumbnailURL);
+        originalThumbnailURL.searchParams.set('w', '300');
+        originalThumbnailURL.searchParams.set('h', '200');
+        originalThumbnailURL = originalThumbnailURL.toString();
 
         //Downloading the image and saving it in /uploads
         const imageFileName = crypto.createHash('md5').update(Date.now().toString()).digest('hex');
@@ -105,7 +111,7 @@ async function Generate_blog(){
         }
 
         //Downloading thumbnail
-        const thumbnailResult = await downloadImageAndSave(thumbnailURL, uploadPath, thumbnailFileName);
+        const thumbnailResult = await downloadImageAndSave(originalThumbnailURL, uploadPath, thumbnailFileName);
         if(thumbnailResult == false){
             throw "Couldn't download thumbnail";
         }

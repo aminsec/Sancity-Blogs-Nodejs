@@ -83,10 +83,6 @@ async function genBcrypt(operation, userPass, hashedPassword){
 };
 
 async function downloadImageAndSave(originalImageURL, filePath, fileName) {
-    console.log("URL: " + originalImageURL);
-    console.log("Path: " + filePath);
-    console.log("Name: " + fileName);
-
     try {
         const response = await axios({
             url: originalImageURL,
