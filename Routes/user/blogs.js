@@ -28,10 +28,10 @@ router.get("/", async (req, resp) => {
 
 router.post("/new", async (req, resp) => {
     const { userInfo } = req;
-    var { bannerPic, title, body, tags, option} = req.body;
+    var { bannerPic, thumbnail, title, body, tags, option} = req.body;
 
     //Validating blog values before inserting
-    const blogResult = await validateBlogValues(bannerPic, title, body, tags, option, resp);
+    const blogResult = await validateBlogValues(bannerPic, thumbnail, title, body, tags, option, resp);
     if(blogResult == false) return;
 
     //Getting blog created time
@@ -42,6 +42,7 @@ router.post("/new", async (req, resp) => {
             userid: userInfo.id,
             blog_content: body, 
             blog_image: blogResult.blog_image,
+            blog_thumbnail: blogResult.blog_thumbnail,
             blog_title: title,
             tags: tags,
             is_public: option.is_public,
@@ -361,7 +362,7 @@ router.get("/:blogId/save", async (req, resp) => {
 router.put("/:blogId/update", async (req, resp) => {
     var { blogId } = req.params;
     const { userInfo } = req; 
-    var { bannerPic, title, body, tags, option} = req.body;
+    var { bannerPic, thumbnail, title, body, tags, option} = req.body;
 
     //validating user input to get only numbers
     if(! await validateUserInputAsNumber(blogId)){
@@ -385,12 +386,13 @@ router.put("/:blogId/update", async (req, resp) => {
     }
 
     //Validating blog values before inserting
-    const blogResult = await validateBlogValues(bannerPic, title, body, tags, option, resp);
+    const blogResult = await validateBlogValues(bannerPic, thumbnail, title, body, tags, option, resp);
     if(blogResult == false) return;
     
     const updateBlog = await blogsTB.update({
         blog_title: title,
         blog_image: blogResult.blog_image,
+        blog_thumbnail: blogResult.blog_thumbnail,
         blog_content: body,
         tags: tags,
         is_public: option.is_public,

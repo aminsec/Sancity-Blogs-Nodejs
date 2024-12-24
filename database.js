@@ -98,6 +98,12 @@ const blogsTB = sequelize.define("blogs", {
         defaultValue: "/api/v1/profilePics/defaultBanner.jpg"
     },
 
+    blog_thumbnail: {
+        type: DataTypes.STRING,
+        defaultValue: "/api/v1/profilePics/default-thumbnail.jpg",
+        allowNull: false
+    },
+
     blog_title: {
         type: DataTypes.STRING,
         allowNull: false,

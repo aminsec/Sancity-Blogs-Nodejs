@@ -40,9 +40,9 @@ async function validateBlogInfo(blog, extraKeysToBeFilter = []){
     return blog;
 };
 
-async function validateBlogValues(bannerPic, title, body, tags, option, resp){
+async function validateBlogValues(bannerPic, thumbnail, title, body, tags, option, resp){
     //Validating user inputs
-    if(await isUndefined(resp, bannerPic, title, body, tags, option)) return false;
+    if(await isUndefined(resp, bannerPic, thumbnail, title, body, tags, option)) return false;
 
     if(title == "" || body == ""){
         const message = {state: "failed", message: "Fields can not be empty"};
@@ -108,13 +108,26 @@ async function validateBlogValues(bannerPic, title, body, tags, option, resp){
                 }
             });
         }
+
+        if(thumbnail){
+            const base64Data = thumbnail.replace(/^data:image\/png;base64,/, "");
+            const buffer = Buffer.from(base64Data, 'base64');
+            let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex");
+            var blog_thumbnail = "/api/v1/profilePics/" + randomFileName;
+            const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
+            fs.writeFile(filePath, buffer, (err) => {
+                if (err) {
+                    console.log(err);
+                }
+            });
+        }
     } catch (error) {
         const message = {state: "failed", message: "Couldn't upload image"};
         sendResponse(message, resp, {}, 500);
         return false
     }
 
-    return {state: "sucess", blog_image: blog_image};
+    return {state: "sucess", blog_image: blog_image, blog_thumbnail: blog_thumbnail};
 };
 
 //A function to check type of variables
