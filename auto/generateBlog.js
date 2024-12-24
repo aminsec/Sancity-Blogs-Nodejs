@@ -3,6 +3,7 @@ const { createClient } = require('pexels');
 const { exec } = require("child_process");
 const crypto = require('crypto');
 const { blogsTB, generated_ai_blogsTB } = require("../database");
+const { downloadImageAndSave } = require("../utils/opt");
 
 async function Generate_blog(){
     //Connecting to ai to get a random blog
@@ -80,35 +81,42 @@ async function Generate_blog(){
             throw new Error("There is no image related to this blog.");
         };
 
-        //Getting image
-        const imageURL = photos.photos[0].src.landscape;
-        
+        //Getting images for banner and thumbnail
+        const imageURL = photos.photos[0].src.landscape; //For banner
+        const thumbnailURL =  photos.photos[0].src.tiny; //For thumbnail
+
         //Changing image size
         let originalImageURL = new URL(imageURL);
-        originalImageURL.searchParams.set('w', '2600');
-        originalImageURL.searchParams.set('h', '380');
+        originalImageURL.searchParams.set('w', '2900');
+        originalImageURL.searchParams.set('h', '390');
         originalImageURL = originalImageURL.toString();
 
         //Downloading the image and saving it in /uploads
         const imageFileName = crypto.createHash('md5').update(Date.now().toString()).digest('hex');
-        const imageAPIPath = "/api/v1/profilePics/" + imageFileName;
-        exec(`curl "${originalImageURL}" -o /var/www/html/api/uploads/${imageFileName}`, async (error, stdout, stderr) => {
-            if (error) {
-                console.log(`error: ${error.message}`);
-                return;
-            }
-            if (stderr) {
-                console.log(`stderr: ${stderr}`);
-                return;
-            }
-        });
+        const thumbnailFileName = crypto.createHash('md5').update(imageFileName).digest('hex');
+        const uploadPath = "/var/www/html/api/uploads";
+        const bannerAPIPath = "/api/v1/profilePics/" + imageFileName;
+        const thumbnailAPIPath = "/api/v1/profilePics/" + thumbnailFileName;
+
+        //Downloading banner
+        const bannerResult = await downloadImageAndSave(originalImageURL, uploadPath, imageFileName);
+        if(bannerResult == false){
+            throw "Couldn't download banner";
+        }
+
+        //Downloading thumbnail
+        const thumbnailResult = await downloadImageAndSave(thumbnailURL, uploadPath, thumbnailFileName);
+        if(thumbnailResult == false){
+            throw "Couldn't download thumbnail";
+        }
 
         try {
             //Adding the blog into the DB
             const createBlog = await blogsTB.create({
                 userid: "108",
                 blog_content: aiResponseText.body, 
-                blog_image: imageAPIPath,
+                blog_image: bannerAPIPath,
+                blog_thumbnail: thumbnailAPIPath,
                 blog_title: aiResponseText.title,
                 tags: blogTags,
                 is_public: "1",

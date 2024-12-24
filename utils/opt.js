@@ -1,5 +1,9 @@
 const { notificationsTB, usersTB } = require("../database");
 const bcrypt = require("bcrypt");
+const axios = require('axios');
+const fs = require('fs');
+const { exec } = require("child_process");
+const path = require('path');
 
 //Function to send normall messages
 function sendResponse(data, resp, headers = {}, code = 200){
@@ -76,7 +80,35 @@ async function genBcrypt(operation, userPass, hashedPassword){
         const result = await bcrypt.compare(userPass, hashedPassword);
         return result
     }
-}
+};
+
+async function downloadImageAndSave(originalImageURL, filePath, fileName) {
+    console.log("URL: " + originalImageURL);
+    console.log("Path: " + filePath);
+    console.log("Name: " + fileName);
+
+    try {
+        const response = await axios({
+            url: originalImageURL,
+            method: 'GET',
+            responseType: 'stream',
+        });
+
+        const outputPath = path.join(filePath, fileName);
+        const writer = fs.createWriteStream(outputPath);
+
+        response.data.pipe(writer);
+
+        return new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+
+    } catch (error) {
+        console.error(`Failed to download image: ${error.message}`);
+        return false;
+    }
+};
 
 module.exports = {
     genBcrypt,
@@ -84,5 +116,6 @@ module.exports = {
     removeItemFromArray,
     createNotification,
     queryUserInfo,
-    sortObjectByValuesDescending
+    sortObjectByValuesDescending,
+    downloadImageAndSave
 }
