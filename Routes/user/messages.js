@@ -11,7 +11,9 @@ router.get("/:contact", async (req, resp) => {
     var { offset } = req.query;
     
     //Validating limit and offset value
-    if((await isUndefined(resp, limit, offset)) || (limit > 1000 || offset > 1000)){
+    if(await isUndefined(resp, limit, offset)) return;
+    
+    if(limit > 1000 || offset > 1000){
         const message = {state: "failed", message: "Invalid limit or offset value"};
         sendResponse(message, resp);
         return
