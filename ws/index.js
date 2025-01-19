@@ -1,6 +1,5 @@
 const { validateWSM, validateWST } = require("../utils/validate");
 const { messagesTB } = require("../database");
-const { v4: uuidv4 } = require("uuid");
 const WebSocket = require('ws');
 
 /**
@@ -24,18 +23,29 @@ async function handelWSC(client, wss) {
         client.ping(); // Send a ping to the client
     }
   }, 10000); // Ping every 10 seconds
+
     //Extracting username from token and assiging it to its connection to keep tracking
     const clientUsername = userInfo.username;
+    
+    //Removing last connection if exist
+    for(cl of wss.clients){
+        if(cl.id === clientUsername){
+            delete cl.id
+        }
+    }
+
+    //Assigning id to client
     client.id = clientUsername;
 
     client.onmessage = async (clientMessage) => {
         //Sending Message - We should validate user message type and their token on each message, Otherwise there's gonna be a security bug
         const [isValidMessageAndToken, message] = await validateWSM(clientMessage.data);
+        
         if(isValidMessageAndToken == false){
             client.send("Invalid message or token");
             return
         };
-        
+
         wss.clients.forEach(cl => {
             if(cl.id == message.to){
                 if(cl.readyState == 1){
@@ -62,6 +72,7 @@ async function handelWSC(client, wss) {
     };
 
     client.onclose = () => {
+        console.log("client disconnected");
         clearInterval(interval);
     }
 }
