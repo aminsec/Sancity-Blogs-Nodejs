@@ -77,6 +77,13 @@ async function validateBlogValues(bannerPic, thumbnail, title, body, tags, optio
         return false;
     }
 
+    //Preventing DOS by checking blog length
+    if(body.length > 60000){
+        const message = {state: "failed", message: "Body is too long"}
+        sendResponse(message, resp, {}, 400);
+        return false;
+    }
+
     if(tags != ""){
         //Validating tags
         if(!tags.startsWith("#")){
