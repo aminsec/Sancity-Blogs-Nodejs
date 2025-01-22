@@ -196,7 +196,7 @@ router.get("/:blogId/like", async (req, resp) => {
                 }
             });
             var blogLikes = blogInfo.dataValues.likes;
-            blogLikes =- 1;
+            blogLikes -= 1;
 
             //Updating blog's likes - 1
             const decreaseLike = await blogsTB.update({
@@ -247,7 +247,7 @@ router.get("/:blogId/like", async (req, resp) => {
             });
 
             var blogLikes = blogInfo.dataValues.likes;
-            blogLikes =+ 1;
+            blogLikes += 1;
 
             //Updating likes
             const increaseLikes = await blogsTB.update({
