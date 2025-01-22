@@ -63,9 +63,16 @@ async function validateBlogValues(bannerPic, thumbnail, title, body, tags, optio
     }
    
 
-    //Preventing DOS
+    //Preventing DOS by checking tags length
     if(tags.length > 255){
         const message = {state: "failed", message: "Tags are too long"}
+        sendResponse(message, resp, {}, 400);
+        return false;
+    }
+
+    //Preventing DOS by checking title length
+    if(title.length > 120){
+        const message = {state: "failed", message: "Title is too long"}
         sendResponse(message, resp, {}, 400);
         return false;
     }
