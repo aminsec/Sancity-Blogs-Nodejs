@@ -289,27 +289,25 @@ router.delete("/deleteAccount", async (req, resp) => {
     //Checking user inputes
     if(await isUndefined(resp, password, confirm_password)) return;
 
-    //Checking user account password
-    const passwordHash = crypto.createHash('md5').update(password).digest('hex');
-    const confirm_passwordHash = crypto.createHash('md5').update(confirm_password).digest('hex');
-
-    if(passwordHash !== confirm_passwordHash){
+    if(password !== confirm_password){
         const message = {state: "failed", message: "Passwords does not match"};
         sendResponse(message, resp, {}, 400);
         return
     }
 
-    //Checking if password is correct 
-    const getUserInfo = await usersTB.findOne({
+    //Checking user password
+    const userData = await usersTB.findOne({
         where: {
-            userid: userInfo.id,
-            password: passwordHash
+            username: userInfo.username
         }
     });
 
-    if(!getUserInfo){
-        const message = {state: "failed", message: "Incorrect password"};
-        sendResponse(message, resp, {}, 401);
+    //Comparing passwords
+    const userCurrentHashedPassword = userData.password;
+    const passwordCheckResult = await genBcrypt("compare", password, userCurrentHashedPassword);
+    if(passwordCheckResult === false){
+        const message = {state: "failed", message: "Current password is incorrect"};
+        sendResponse(message, resp, {}, 400);
         return
     }
 
@@ -352,7 +350,8 @@ router.delete("/deleteAccount", async (req, resp) => {
     
     //revoking session
     const revokeSession = await dead_sessionsTB.create({
-        session: token
+        session: token,
+        timestamp: Date.now().toString()
     });
 
     const message = {state: "success", message: "Account deleted succussfully"};
