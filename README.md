@@ -1,6 +1,5 @@
 # Sancity-Blogs-Source
-This is the Source of Sancity Blogs project(Backend Nodejs) writted by aminsec.
-This project doesn't have a professional UI, cause im not a frontend developer :)
+This is the Backend Node.js source of Sancity Blogs project developed by Mohammad Amin Choopani(aminsec).
 
 # Technologies Used
 - AI 
