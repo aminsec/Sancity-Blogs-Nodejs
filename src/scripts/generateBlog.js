@@ -1,9 +1,9 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { createClient } = require('pexels');
-const { exec } = require("child_process");
 const crypto = require('crypto');
-const { blogsTB, generated_ai_blogsTB } = require("../database");
-const { downloadImageAndSave } = require("../utils/opt");
+const { blogsTB } = require("../models/blogs.model");
+const { generated_ai_blogsTB } = require("../models/generated_ai_blogs.model");
+const { downloadImageAndSave } = require("../utils/operations");
 
 async function Generate_blog(){
     //Connecting to ai to get a random blog

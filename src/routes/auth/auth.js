@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { usersTB, dead_sessionsTB } = require("../../database");
+const { usersTB } = require("../../models/users.model");
+const { dead_sessionsTB } = require("../../models/dead_sessions.model");
 const jwt = require('jsonwebtoken');
 const { isUndefined, validateUsername } = require("../../utils/validate");
-const { sendResponse, genBcrypt } = require("../../utils/opt");
+const { sendResponse, genBcrypt } = require("../../utils/operations");
 var validator = require("email-validator");
 
 router.post("/login", async (req, resp) => {

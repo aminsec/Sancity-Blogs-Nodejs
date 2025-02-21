@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { dead_sessionsTB } = require("../database");
+const { dead_sessionsTB } = require("../models/dead_sessions.model");
 //A middleware to validate JWT token
 async function validateJWT(req, resp, next){
   //Redirecting to /login if token is not found

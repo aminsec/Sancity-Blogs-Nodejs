@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { commentsTB, blogsTB } = require("../../database");
+const { commentsTB } = require("../../models/comments.model");
+const { blogsTB } = require("../../models/blogs.model");
 const { validateUserInputAsNumber, isUndefined, validateBlogInfo, validateType } = require("../../utils/validate");
-const { sendResponse, sortObjectByValuesDescending, queryUserInfo } = require("../../utils/opt");
+const { sendResponse, sortObjectByValuesDescending, queryUserInfo } = require("../../utils/operations");
 
 router.get("/", async (req, resp) => {
     const blogsList = [];

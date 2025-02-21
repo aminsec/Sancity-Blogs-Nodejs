@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { commentsTB, usersTB, blogsTB } = require("../../database");
+const { usersTB } = require("../../models/users.model");
+const { blogsTB } = require("../../models/blogs.model");
+const { commentsTB } = require("../../models/comments.model");
 const { validateUserInputAsNumber, validateCommentValues } = require("../../utils/validate");
-const { removeItemFromArray, createNotification, sendResponse } = require("../../utils/opt");
+const { removeItemFromArray, createNotification, sendResponse } = require("../../utils/operations");
 
 router.get("/liked-comments", async (req, resp) => {
     const { userInfo } = req;

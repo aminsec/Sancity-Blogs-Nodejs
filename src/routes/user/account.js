@@ -4,8 +4,13 @@ const crypto = require('crypto');
 const upload = require("../../middlewares/upload");
 const emailValidator = require("email-validator");
 const jwt = require('jsonwebtoken');
-const { usersTB, blogsTB, dead_sessionsTB, notificationsTB, commentsTB, messagesTB } = require("../../database");
-const { sendResponse, removeItemFromArray, genBcrypt } = require("../../utils/opt");
+const { dead_sessionsTB } = require("../../models/dead_sessions.model");
+const { usersTB } = require("../../models/users.model");
+const { blogsTB } = require("../../models/blogs.model");
+const { notificationsTB } = require("../../models/notifications.model");
+const { commentsTB } = require("../../models/comments.model");
+const { messagesTB } = require("../../models/messages.model");
+const { sendResponse, removeItemFromArray, genBcrypt } = require("../../utils/operations");
 const { isUndefined, validateUsername } = require("../../utils/validate");
 
 router.get("/info", async(req, resp) => {

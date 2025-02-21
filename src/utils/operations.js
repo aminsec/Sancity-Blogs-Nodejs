@@ -1,8 +1,8 @@
-const { notificationsTB, usersTB } = require("../database");
+const { usersTB } = require("../models/users.model");
+const { notificationsTB } = require("../models/notifications.model");
 const bcrypt = require("bcrypt");
 const axios = require('axios');
 const fs = require('fs');
-const { exec } = require("child_process");
 const path = require('path');
 
 //Function to send normall messages

@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
-const { usersTB, blogsTB } = require("../../database");
+const { usersTB } = require("../../models/users.model");
+const { blogsTB } = require("../../models/blogs.model");
 const { validateUserInputAsNumber, validateBlogInfo } = require("../../utils/validate");
-const { sendResponse } = require("../../utils/opt");
+const { sendResponse } = require("../../utils/operations");
 
 router.get("/:userid", async (req, resp) => {
     const { userid } = req.params; //The input can be a userid or a username

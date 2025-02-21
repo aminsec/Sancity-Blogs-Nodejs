@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { blogsTB, usersTB } = require('../../database');
-const { sendResponse } = require('../../utils/opt');
+const { usersTB } = require("../../models/users.model");
+const { blogsTB } = require("../../models/blogs.model");
+const { sendResponse } = require('../../utils/operations');
 const { isUndefined } = require('../../utils/validate');
 
 router.post('/summary', async (req, resp) => {

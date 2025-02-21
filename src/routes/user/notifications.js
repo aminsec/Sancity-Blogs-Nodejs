@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { notificationsTB } = require("../../database");
+const { notificationsTB } = require("../../models/notifications.model");
 const { validateUserInputAsNumber } = require("../../utils/validate");
-const { sendResponse } = require("../../utils/opt");
+const { sendResponse } = require("../../utils/operations");
 
 router.get("/", async (req, resp) => {
     const { userInfo } = req;

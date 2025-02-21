@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { usersTB, blogsTB } = require("../../database");
+const { usersTB } = require("../../models/users.model");
+const { blogsTB } = require("../../models/blogs.model");
 const { validateUserInputAsNumber, validateBlogInfo, validateBlogValues } = require("../../utils/validate");
-const { sendResponse, createNotification, removeItemFromArray } = require("../../utils/opt");
+const { sendResponse, createNotification, removeItemFromArray } = require("../../utils/operations");
 
 router.get("/", async (req, resp) => {
     var blogs = [];

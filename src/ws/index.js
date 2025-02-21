@@ -1,5 +1,5 @@
 const { validateWSM, validateWST } = require("../utils/validate");
-const { messagesTB } = require("../database");
+const { messagesTB } = require("../models/messages.model");
 const WebSocket = require('ws');
 
 /**

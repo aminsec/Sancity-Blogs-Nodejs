@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { sendResponse } = require("./opt");
+const { sendResponse } = require("./operations");
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');

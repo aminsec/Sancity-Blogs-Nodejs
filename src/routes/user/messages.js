@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { sendResponse } = require("../../utils/opt");
+const { sendResponse } = require("../../utils/operations");
 const { validateUserInputAsNumber, isUndefined } = require("../../utils/validate");
-const { messagesTB } =  require("../../database");
+const { messagesTB } = require("../../models/messages.model");
 
 router.get("/:contact", async (req, resp) => {
     const { userInfo } = req;
