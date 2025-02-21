@@ -1,7 +1,6 @@
 const http = require("http");
 const websocket = require("ws");
 const cron = require("node-cron");
-
 const app = require("./app");
 const { handelWSC } = require("./ws/index");
 const { Generate_blog } = require("./scripts/generateBlog");
