@@ -1,59 +1,26 @@
-const { usersTB } = require("../../models/users.model");
-const { dead_sessionsTB } = require("../../models/dead_sessions.model");
 const jwt = require('jsonwebtoken');
 const { isUndefined, validateUsername } = require("../../utils/validate");
-const { sendResponse, genBcrypt } = require("../../utils/operations");
+const { sendResponse } = require("../../utils/operations");
+const auth_services = require("../../services/auth/auth.service");
 var validator = require("email-validator");
 
 async function login(req, resp) {
     //Getting username and password from body
     const { username, password } = req.body; 
-    
+
     //Returning, If parameters not defined
     if(await isUndefined(resp, username, password)) return;
-
-    //Quering user's data
-    const userData = await usersTB.findOne({
-        where: {
-            username: username
-        }
-    });
-
-    //Responding with 401 if username was not found
-    if(userData == null){
-        const message = {message: "Invalid credentials", state: "failed"};
-        sendResponse(message, resp, {}, 401);
-        return
-    }
-
-    //Comparing password
-    const userHashedPassword = userData.dataValues.password;
-    const passwordCheckResult = await genBcrypt("compare", password, userHashedPassword);
     
-    if(passwordCheckResult == false){
-        const message = {message: "Invalid credentials", state: "failed"};
-        sendResponse(message, resp, {}, 401);
-        return
-    }
+    //Calling the service 
+    const [ error, token ] = await auth_services.login(username, password);
     
-    //Getting user's data if credentials were valid
-
-    const userInfo = {
-        username: userData.username,
-        email: userData.email,
-        id: userData.userid,
-        role: userData.role,
-        profilePic: userData.profilePic
+    if(error){
+        sendResponse(error, resp, {}, error.code);
+        return;
     };
-    
-    //Signing token
-    const token = jwt.sign(userInfo, process.env.JWT_SECRET,{
-        expiresIn: "1h"
-    });
-    
-    //Responding with token
-    resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
-    resp.end();
+
+    resp.cookie("token", token);
+    resp.end()
 };
 
 async function signup(req, resp) {
@@ -73,87 +40,21 @@ async function signup(req, resp) {
         return
     }
 
-    //Checking if the username exist
-    const usernameExist = await usersTB.findOne({
-        where: {
-            username: username
-        }
-    });
+    //Calling service
+    const [error, token] = await auth_services.signup(username, password, email);
 
-    if(usernameExist){
-        const message = {message: "This username already exist", state: "failed"};
-        sendResponse(message, resp, {}, 400);
-        return
+    if(error){
+        sendResponse(error, resp, {}, error.code);
+        return;
     }
 
-    //Checking if the email exist
-    const emailExist = await usersTB.findOne({
-        where: {
-            email: email
-        }
-    })
-    if(emailExist){
-        const message = {message: "This email already exist", state: "failed"};
-        sendResponse(message, resp, {}, 400);
-        return
-    }
-
-    //Inserting user
-    var createdTime = Date.now().toString();
-    
-    //hashing the password to bcrypt
-    let userHashPassword = await genBcrypt("create", password);
-    
-    try {
-        //Inserting user's data
-        const insertUser = await usersTB.create({
-            username: username,
-            password: userHashPassword,
-            email: email,
-            role: "user",
-            joinDate: createdTime
-        })
-        if(insertUser){
-            const userData = {
-                username: username,
-                email:  email,
-                id: insertUser.userid,
-                profilePic: "/api/v1/profilePics/ProfileDefault.png",
-                role: "user"
-            }
-            //Creating token
-            const token = jwt.sign(userData, process.env.JWT_SECRET);
-            resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
-            resp.end();
-            return;
-        }
-    } catch (error) {
-        const message = {"message": "An error accoured", "success": false};
-        sendResponse(message, resp, {}, 500);
-        return
-    }
+    resp.cookie("token", token, {httpOnly: true, sameSite: 'lax'});
+    resp.end();
 };
 
 async function logout(req, resp) {
     if(req.cookies.token){
-        try {
-            //validating the cookie's value to insert only valid jwt token to dead_sessions table
-            jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-            const revokeToken = await dead_sessionsTB.create({
-                session: req.cookies.token,
-                timestamp: Date.now().toString()
-            })
-            resp.cookie("token", "deleted");
-            resp.redirect("/");
-            resp.end();
-            return
-
-        } catch (error) {
-            resp.cookie("token", "deleted");
-            resp.redirect("/");
-            resp.end();
-            return
-        }
+        await auth_services.revoke_token(req)
     }
 
     resp.cookie("token", "deleted");
@@ -172,14 +73,11 @@ async function check(req, resp) {
 
     try {
         //If token was not valid, it will go through an error
-        const isValidToken = jwt.verify(token, process.env.JWT_SECRET);
+        jwt.verify(token, process.env.JWT_SECRET);
         
-        //checking if the token is a revoked token
-        const isRevokedToken = await dead_sessionsTB.findOne({
-            where: {
-                session: token
-            }
-        });
+        //Checking if token is revoked
+        const isRevokedToken = await auth_services.check(token);
+
         if(isRevokedToken){
             const message = {"message": false};
             sendResponse(message, resp);
