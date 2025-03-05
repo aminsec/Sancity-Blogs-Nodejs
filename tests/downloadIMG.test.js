@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-const { downloadImageAndSave } = require("../utils/opt");
+const { downloadImageAndSave } = require("../src/utils/operations");
 const crypto = require('crypto');
 
 describe("downloadImageAndSave", () => {

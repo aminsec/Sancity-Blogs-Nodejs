@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-const { genBcrypt } = require("../utils/opt")
+const { genBcrypt } = require("../src/utils/operations");
 
 describe("genBcrypt", () => {
     it("must create bcrypt hash", async () => {
