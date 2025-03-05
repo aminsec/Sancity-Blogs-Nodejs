@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { isUndefined, validateUsername } = require("../../utils/validate");
-const { sendResponse } = require("../../utils/operations");
+const { sendResponse, showError } = require("../../utils/operations");
 const auth_services = require("../../services/auth/auth.service");
 var validator = require("email-validator");
 
@@ -15,12 +15,12 @@ async function login(req, resp) {
     const [ error, token ] = await auth_services.login(username, password);
     
     if(error){
-        sendResponse(error, resp, {}, error.code);
+        showError(error, resp);
         return;
     };
 
     resp.cookie("token", token);
-    resp.end()
+    resp.end();
 };
 
 async function signup(req, resp) {
@@ -35,16 +35,16 @@ async function signup(req, resp) {
 
     //Validating email
     if(!validator.validate(email)){
-        const message = {message: "Invalid email", state: "failed"};
-        sendResponse(message, resp, {}, 400);
-        return
+        const error = {message: "Invalid email format", state: "failed", type: "input_error"};
+        showError(error, resp);
+        return;
     }
 
     //Calling service
     const [error, token] = await auth_services.signup(username, password, email);
 
     if(error){
-        sendResponse(error, resp, {}, error.code);
+        showError(error, resp);
         return;
     }
 
@@ -54,19 +54,25 @@ async function signup(req, resp) {
 
 async function logout(req, resp) {
     if(req.cookies.token){
-        await auth_services.revoke_token(req)
-    }
+        const [error, success] = await auth_services.revoke_token(req);
+        if(error){
+            showError(error, resp);
+            return;
+        }
 
-    resp.cookie("token", "deleted");
-    resp.redirect("/");
-    resp.end();
+        if(success === true){
+            resp.cookie("token", "deleted");
+            resp.redirect("/");
+            resp.end();
+        }
+    }
 };
 
 async function check(req, resp) {
     if(!req.cookies.token){
         const message = {"message": false};
         sendResponse(message, resp);
-        return
+        return;
     }
 
     const token = req.cookies.token;
@@ -76,17 +82,22 @@ async function check(req, resp) {
         jwt.verify(token, process.env.JWT_SECRET);
         
         //Checking if token is revoked
-        const isRevokedToken = await auth_services.check(token);
+        const [error, isRevokedToken] = await auth_services.check(token);
 
-        if(isRevokedToken){
+        if(error){
+            showError(error, resp);
+            return;
+        }
+
+        if(isRevokedToken === true){
             const message = {"message": false};
             sendResponse(message, resp);
-            return
+            return;
         }
 
         const message = {"message": true};
         sendResponse(message, resp);
-        return
+        return;
         
     } catch (error) {
         const message = {"message": false};
@@ -96,8 +107,8 @@ async function check(req, resp) {
 };
 
 module.exports = {
-    login: login,
-    signup: signup,
-    logout: logout,
-    check: check
+    login,
+    signup,
+    logout,
+    check
 };

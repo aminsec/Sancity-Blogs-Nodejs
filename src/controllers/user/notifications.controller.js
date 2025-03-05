@@ -1,37 +1,30 @@
 const { notificationsTB } = require("../../models/notifications.model");
 const { validateUserInputAsNumber } = require("../../utils/validate");
-const { sendResponse } = require("../../utils/operations");
+const { sendResponse, showError } = require("../../utils/operations");
+const notif_services = require("../../services/user/notifications.service");
 
 async function all(req, resp) {
     const { userInfo } = req;
     const userid = userInfo.id;
 
-    //Quering notifications based on their times
-    const notifcations = await notificationsTB.findAll({
-        where: {
-            userid: userid
-        },
-        order: [
-            ["timestamp", "DESC"]
-        ],
-        limit: 10
-    });
+    const [error, notifications] = await notif_services.get_notifications(userid);
+    if(error){
+        showError(error, resp);
+        return;
+    }
 
-    const message = {state: "success", notifications: notifcations};
+    const message = {state: "success", notifications: notifications};
     sendResponse(message, resp);
 };
 
 async function seen(req, resp) {
     const { userInfo } = req;
     
-    //Updating notifications seen state
-    await notificationsTB.update({
-        seen: 1
-    }, {
-        where: {
-            userid: userInfo.id
-        }
-    });
+    const [error, _ ] = await notif_services.seen_notifs(userInfo);
+    if(error){
+        showError(error, resp);
+        return;
+    }
 
     const message = {state: "success"};
     sendResponse(message, resp);
@@ -41,49 +34,27 @@ async function delete_notification(req, resp) {
     const { notifId } = req.params;
     const { userInfo } = req;
 
-    //There are two kinds of notifId here, first an integer like 12,22,34 ... and second is "all"
-    if(notifId == "all"){
-        const deleteAllNotifs = await notificationsTB.destroy({
-            where: {
-                userid: userInfo.id
-            }
-        });
-
-        if(deleteAllNotifs){
-            const message = {state: "success"};
-            sendResponse(message, resp);
-            return;
-
-        }else{
-            const message = {state: "failed"};
-            sendResponse(message, resp, {}, 500);
-            return;
-        }
-    }
-
     //Validating user input
-    if(! await validateUserInputAsNumber(notifId)){
-        const message = {state: "failed", message: "Notification not found"};
-        sendResponse(message, resp, {}, 404);
+    if(notifId !== "all" && ! await validateUserInputAsNumber(notifId)){
+        const error = {message: "Invalid notification id", state: "failed", type: "input_error"};
+        showError(error, resp);
         return;
     }
 
-    //Deleting the notification
-    const deleteNotif = await notificationsTB.destroy({
-        where: {
-            id: notifId,
-            userid: userInfo.id
-        }
-    });
+    const [error, delete_notif_result] = await notif_services.delete_notification(userInfo, notifId);
+    if(error){
+        showError(error, resp);
+        return;
+    }
 
-    if(deleteNotif){
-        const message = {state: "success"}
+    if(delete_notif_result === true){
+        const message = {state: "success"};
         sendResponse(message, resp);
         return;
 
     }else{
-        const message = {state: "failed"}
-        sendResponse(message, resp);
+        const error = {message: "Couldn't delete notifications", state: "failed", type: "input_error"};
+        showError(error, resp);
         return;
     }
 };

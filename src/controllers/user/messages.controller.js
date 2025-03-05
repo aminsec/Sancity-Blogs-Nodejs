@@ -1,8 +1,8 @@
-const { sendResponse } = require("../../utils/operations");
 const { validateUserInputAsNumber, isUndefined } = require("../../utils/validate");
-const { messagesTB } = require("../../models/messages.model");
+const messages_services = require("../../services/user/messages.service");
+const { showError, sendResponse } = require("../../utils/operations");
 
-async function send_message(req, resp) {
+async function get_messages(req, resp) {
     const { userInfo } = req;
     const { contact } = req.params;
     var { limit } = req.query;
@@ -12,51 +12,27 @@ async function send_message(req, resp) {
     if(await isUndefined(resp, limit, offset)) return;
     
     if(limit > 1000 || offset > 1000){
-        const message = {state: "failed", message: "Invalid limit or offset value"};
-        sendResponse(message, resp);
+        const error = { message: "Invalid limit or offset value", state: "failed", type: "input_error"};
+        showError(error, resp);
         return;
     }
 
     if(! await validateUserInputAsNumber(limit, offset)){
-        const message = {state: "failed", message: "Invalid limit or offset value"};
-        sendResponse(message, resp);
+        const error = { message: "Invalid limit or offset value", state: "failed", type: "input_error"};
+        showError(error, resp);
         return;
     }
-    
-    //Converting
-    limit = Number(limit);
-    offset = Number(offset);
 
-    const sentMessages = await messagesTB.findAll({
-        where: {
-            sender: userInfo.username,
-            receiver: contact
-        },
-
-        limit: limit,
-        offset: offset
-    });
-
-    const receivedMessages = await messagesTB.findAll({
-        where: {
-            sender: contact,
-            receiver: userInfo.username
-        },
-
-        limit: limit,
-        offset: offset
-    });
-
-    if(sentMessages && receivedMessages){
-        const message = {state: "success", messages: {sents: sentMessages,receiveds: receivedMessages}};
-        sendResponse(message, resp);
-
-    }else{
-        const message = {state: "failed", message: "User not found"};
-        sendResponse(message, resp);
+    const [error, result] = await messages_services.get_sent_received_messages(userInfo, contact, limit, offset);
+    if(error){
+        showError(error, resp);
+        return;
     }
+
+    const messages = {state: "success", messages: result};
+    sendResponse(messages, resp);
 };
 
 module.exports = {
-    send_message
-}
+    get_messages
+};

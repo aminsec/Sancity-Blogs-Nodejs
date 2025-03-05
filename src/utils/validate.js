@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { sendResponse } = require("./operations");
+const { showError } = require("./operations");
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
@@ -40,20 +40,31 @@ async function validateBlogInfo(blog, extraKeysToBeFilter = []){
     return blog;
 };
 
+function validateUserInfo(userInfo){
+    //giving only public information
+    var data = {}
+    data.userid = userInfo.userid;
+    data.username = userInfo.username;
+    data.bio = userInfo.bio;
+    data.profilePic = userInfo.profilePic;
+    data.joinDate = userInfo.joinDate;
+    return data;
+}
+
 async function validateBlogValues(bannerPic, thumbnail, title, body, tags, option, resp){
     //Validating user inputs
     if(await isUndefined(resp, bannerPic, thumbnail, title, body, tags, option)) return false;
 
     if(title == "" || body == ""){
-        const message = {state: "failed", message: "Fields can not be empty"};
-        sendResponse(message, resp, {}, 400);
+        const error = {message: "Fields can not be empty", state: "failed", type: "input_error"};
+        showError(error, resp);
         return false;
     }
 
     //Checking options value
     if(!option.hasOwnProperty("is_public") || !option.hasOwnProperty("commentsOff") || !option.hasOwnProperty("showLikes")){
-        const message = {state: "failed", message: "Invalid options"};
-        sendResponse(message, resp, {}, 400);
+        const error = {message: "Invalid option values", state: "failed", type: "input_error"};
+        showError(error, resp);
         return false;
     }
     
@@ -65,30 +76,30 @@ async function validateBlogValues(bannerPic, thumbnail, title, body, tags, optio
 
     //Preventing DOS by checking tags length
     if(tags.length > 255){
-        const message = {state: "failed", message: "Tags are too long"}
-        sendResponse(message, resp, {}, 400);
+        const error = {message: "Tags are too long", state: "failed", type: "input_error"};
+        showError(error, resp);
         return false;
     }
 
     //Preventing DOS by checking title length
     if(title.length > 120){
-        const message = {state: "failed", message: "Title is too long"}
-        sendResponse(message, resp, {}, 400);
+        const error = {message: "Title is too long", state: "failed", type: "input_error"};
+        showError(error, resp);
         return false;
     }
 
     //Preventing DOS by checking blog length
     if(body.length > 60000){
-        const message = {state: "failed", message: "Body is too long"}
-        sendResponse(message, resp, {}, 400);
-        return false;
+        const error = {message: "Body is too long", state: "failed", type: "input_error"};
+        showError(error, resp);
+        return;
     }
 
     if(tags != ""){
         //Validating tags
         if(!tags.startsWith("#")){
-            const message = {state: "failed", message: "Tags must start with '#'"};
-            sendResponse(message, resp, {}, 400);
+            const error = {message: "Tags must start with # character", state: "failed", type: "input_error"};
+            showError(error, resp);
             return false;
         }
         var tagsValue = tags.split("#");
@@ -96,61 +107,29 @@ async function validateBlogValues(bannerPic, thumbnail, title, body, tags, optio
         var validTagRegex = new RegExp("^[a-zA-Z0-9_\-]+$");
         for(var tag of tagsValue){
             if(!tag.match(validTagRegex)){
-                const message = {state: "failed", message: "Just numbers and characters are allowed as tag"};
-                sendResponse(message, resp, {}, 400);
+                const error = {message: "Just numbers and characters are allowed as tag", state: "failed", type: "input_error"};
+                showError(error, resp);
                 return false;
             }
         }
     }
 
     if(body.length < 100){
-        const message = {state: "failed", message: "Body must be at least 100 character"};
-        sendResponse(message, resp, {}, 400);
-        return false
+        const error = {message: "Body must have at least 100 character", state: "failed", type: "input_error"};
+        showError(error, resp);
+        return false;
     }
 
-    try {
-        if(bannerPic){
-            const base64Data = bannerPic.replace(/^data:image\/png;base64,/, "");
-            const buffer = Buffer.from(base64Data, 'base64');
-            let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex");
-            var blog_image = "/api/v1/profilePics/" + randomFileName;
-            const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
-            fs.writeFile(filePath, buffer, (err) => {
-                if (err) {
-                    console.log(err);
-                }
-            });
-        }
-
-        if(thumbnail){
-            const base64Data = thumbnail.replace(/^data:image\/png;base64,/, "");
-            const buffer = Buffer.from(base64Data, 'base64');
-            let randomFileName = crypto.createHash('md5').update((Date.now() + Math.random()).toString()).digest("hex");
-            var blog_thumbnail = "/api/v1/profilePics/" + randomFileName;
-            const filePath = path.join("/var/www/html/api/", 'uploads', `${randomFileName}`);
-            fs.writeFile(filePath, buffer, (err) => {
-                if (err) {
-                    console.log(err);
-                }
-            });
-        }
-    } catch (error) {
-        const message = {state: "failed", message: "Couldn't upload image"};
-        sendResponse(message, resp, {}, 500);
-        return false
-    }
-
-    return {state: "sucess", blog_image: blog_image, blog_thumbnail: blog_thumbnail};
+    return {state: "sucess"};
 };
 
 //A function to check type of variables
 async function validateType(resp, expectedType, ...variables){
     for(vals of variables){
         if(typeof vals != expectedType){
-            const message = {message: "Invalid input type", state: "failed"};
-            sendResponse(message, resp, {}, 400);
-            return false
+            const error = {message: "Invalid input values", state: "failed", type: "input_error"};
+            showError(error, resp);
+            return false;
         }
     }
 
@@ -188,9 +167,9 @@ async function validateWSM(message){
 //A function to check variable(s) are undefined or not
 async function isUndefined(resp, ...params){
     if(params.includes(undefined)){
-        const message = {message: "All fields required", state: "failed"};
-        sendResponse(message, resp, {}, 400);
-        return true
+        const error = {message: "All fields required", state: "failed", type: "input_error"};
+        showError(error, resp);
+        return true;
     }
     
     return false
@@ -199,23 +178,23 @@ async function isUndefined(resp, ...params){
 //A function to validate username rules
 async function validateUsername(username, resp){
     if(username.length < 3) {
-        const message = {message: "Username is too short", state: "failed"};
-        sendResponse(message, resp, {}, 400);
-        return false
+        const error = {message: "Username is too short", state: "failed", type: "input_error"};
+        showError(error, resp);
+        return false;
     }
 
     if(username.length > 24){
-        const message = {message: "Maximum length for username is 24 character", state: "failed"};
-        sendResponse(message, resp, {}, 400);
-        return false
+        const error = {message: "Maximum length for username is 24 character", state: "failed", type: "input_error"};
+        showError(error, resp);
+        return false;
     }
 
     const checkUsernameRG =  new RegExp('^[a-zA-Z0-9_]+$');
     const isValidUsername = username.match(checkUsernameRG);
     if(!isValidUsername){
-        const message = {message: "Username can only contain a-z and 0-9", state: "failed"};
-        sendResponse(message, resp, {}, 400);
-        return false
+        const error = {message: "Username can only contains a-z and 0-9", state: "failed", type: "input_error"};
+        showError(error, resp);
+        return false;
     }
 
     return true
@@ -227,26 +206,26 @@ async function validateCommentValues(comment, resp){
 
     //Validating comment content
     if(comment == undefined){
-        const message = {state: "failed", message: "comment parameter required"};
-        sendResponse(message, resp, {}, 404);
+        const error = {message: "All fields required", state: "failed", type: "input_error"};
+        showError(error, resp);
         return false;
     }
 
     if(comment == ""){
-        const message = {state: "failed", message: "Leave a valid comment"};
-        sendResponse(message, resp, {}, 404);
+        const error = {message: "Invalid input values", state: "failed", type: "input_error"};
+        showError(error, resp);
         return false;
     }
     
     if(comment.match(invalidInputRegex)){
-        const message = {state: "failed", message: "Leave a valid comment"};
-        sendResponse(message, resp, {}, 404);
+        const error = {message: "Invalid input values", state: "failed", type: "input_error"};
+        showError(error, resp);
         return false;
     }
 
     if(comment.length > 276){
-        const message = {state: "failed", message: "Comment is too long"};
-        sendResponse(message, resp, {}, 404);
+        const error = {message: "Comment is too long", state: "failed", type: "input_error"};
+        showError(error, resp);
         return false;
     }
 
@@ -258,6 +237,7 @@ module.exports = {
     validateCommentValues,
     validateBlogValues,
     validateUsername,
+    validateUserInfo,
     validateBlogInfo,
     validateType,
     validateWST,

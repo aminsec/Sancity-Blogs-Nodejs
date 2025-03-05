@@ -14,6 +14,21 @@ function sendResponse(data, resp, headers = {}, code = 200){
     resp.end();
 };
 
+function showError(error, resp){
+    sendResponse(error, resp, {}, (
+        error.type === "not_found" ? 404 : 
+        error.type === "system_error" ? 500 : 
+        error.type === "creds_error" ? 401 : 
+        error.type === "access_denied" ? 403 : 
+        error.type === "input_error" ? 400 : 
+        null));
+
+    if(error.type === "system_error"){
+        console.log(error.message);
+    }
+    return;
+}
+
 //A function to remove specific item from array
 function removeItemFromArray(array, item){
     const indexOfItem = array.indexOf(item);
@@ -108,6 +123,7 @@ async function downloadImageAndSave(originalImageURL, filePath, fileName) {
 
 module.exports = {
     genBcrypt,
+    showError,
     sendResponse,
     removeItemFromArray,
     createNotification,
