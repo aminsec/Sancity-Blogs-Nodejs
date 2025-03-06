@@ -95,6 +95,7 @@ async function validateBlogValues(bannerPic, thumbnail, title, body, tags, optio
         return;
     }
 
+    tags = tags.toString();
     if(tags != ""){
         //Validating tags
         if(!tags.startsWith("#")){
@@ -177,6 +178,7 @@ async function isUndefined(resp, ...params){
 
 //A function to validate username rules
 async function validateUsername(username, resp){
+    username = username.toString();
     if(username.length < 3) {
         const error = {message: "Username is too short", state: "failed", type: "input_error"};
         showError(error, resp);
@@ -217,6 +219,7 @@ async function validateCommentValues(comment, resp){
         return false;
     }
     
+    comment = comment.toString();
     if(comment.match(invalidInputRegex)){
         const error = {message: "Invalid input values", state: "failed", type: "input_error"};
         showError(error, resp);
