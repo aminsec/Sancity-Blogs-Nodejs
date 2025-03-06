@@ -108,7 +108,7 @@ async function like_comment(userInfo, commentId) {
         }
         
         //Getting list of comments user has liked
-        const [err, commentsIdList] = await get_user_liked_comments(userInfo);
+        var [err, commentsIdList] = await get_user_liked_comments(userInfo);
         if(err){
             return [err, null];
         }
