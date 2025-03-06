@@ -2,7 +2,6 @@ const { blogsTB } = require("../../models/blogs.model");
 const { usersTB } = require("../../models/users.model");
 const public_blogs_services = require("../public/public_blogs.service");
 const notification_services = require("../user/notifications.service");
-const account_blogs_services = require("../../services/user/blogs.service");
 const { removeItemFromArray } = require("../../utils/operations");
 const crypto = require('crypto');
 const path = require('path');
@@ -359,7 +358,7 @@ async function save_blog(userInfo, blogId) {
         }
 
         //Getting user saved blogs. If user already saved the posts, we remove it, otherwise we add it to the list
-        const [err, savedPostsLists] = await account_blogs_services.get_user_saved_blogs(userInfo);
+        var [err, savedPostsLists] = await get_user_saved_blogs(userInfo);
         if(err){
             return [err, null];
         }
@@ -388,6 +387,7 @@ async function save_blog(userInfo, blogId) {
         }else{
             //If user has not saved the blog, we add the blogId to list
             savedPostsLists.push(blogId);
+            console.log(savedPostsLists)
             var updatedSavedPostsList = savedPostsLists.join(",");
             const saved = await usersTB.update({
                 savedPosts: updatedSavedPostsList,
@@ -497,8 +497,6 @@ async function get_user_saved_blogs(userInfo) {
         const blogs = savedBlogs.savedPosts;
         var blogsArray = blogs.split(",");
     
-        //removing 0 item from lists that is default value of savedPosts column in DB
-        blogsArray.shift();
         return [null, blogsArray];
 
     } catch (err) {

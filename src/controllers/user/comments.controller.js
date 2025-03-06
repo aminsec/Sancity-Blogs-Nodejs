@@ -20,6 +20,7 @@ async function add_comment(req, resp) {
     var { blogId } = req.params;
     var { comment } = req.body;
     var { userInfo } = req;
+    comment = comment.toString();
 
     //Validating user input
     if(! await validateUserInputAsNumber(blogId)){
